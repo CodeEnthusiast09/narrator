@@ -10,25 +10,41 @@ from narrator.progress import load_progress
 from narrator.skip import detect_candidates
 from narrator.ui import run_player
 
+_DEFAULT_MODEL = Path.home() / '.config' / 'narrator' / 'models' / 'en_US-amy-medium.onnx'
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(
         description='Narrator — PDF audiobook reader',
         epilog='Controls: [SPACE] pause  [→] next page  [←] prev page  [+/-] speed  [Q] quit',
     )
-    parser.add_argument('pdf', help='Path to the PDF file')
+    parser.add_argument('pdf', nargs='?', help='Path to the PDF file')
     parser.add_argument(
         '--auto-skip',
         action='store_true',
         help='Skip front matter automatically without asking',
     )
+    parser.add_argument(
+        '--model',
+        default=str(_DEFAULT_MODEL),
+        metavar='PATH',
+        help=f'Path to a piper .onnx voice model (default: {_DEFAULT_MODEL})',
+    )
     args = parser.parse_args()
 
-    # Fail fast before loading anything
-    if not shutil.which('espeak-ng'):
-        print('Error: espeak-ng is not installed.', file=sys.stderr)
-        print('Install it: sudo pacman -S espeak-ng', file=sys.stderr)
+    model_path = Path(args.model)
+    if not model_path.exists():
+        print(f'Error: voice model not found at {model_path}', file=sys.stderr)
+        print(file=sys.stderr)
+        print('Download a model and its .json config into ~/.config/narrator/models/', file=sys.stderr)
+        print('Example (en_US-amy-medium):', file=sys.stderr)
+        print('  mkdir -p ~/.config/narrator/models && cd ~/.config/narrator/models', file=sys.stderr)
+        print('  wget https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/amy/medium/en_US-amy-medium.onnx', file=sys.stderr)
+        print('  wget https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/amy/medium/en_US-amy-medium.onnx.json', file=sys.stderr)
         sys.exit(1)
+
+    if not args.pdf:
+        parser.error('pdf argument is required')
 
     pdf_path = str(Path(args.pdf).resolve())
     if not Path(pdf_path).exists():
@@ -82,13 +98,14 @@ def main() -> None:
                     skip_pages.add(idx)
             print()
 
-    # First readable page (skip over any skipped leading pages)
+    # First readable page
     first_page = 0
     while first_page < len(pages) and first_page in skip_pages:
         first_page += 1
 
     # Resume check
     start_page = first_page
+    start_sentence = 0
     progress = load_progress(pdf_path)
 
     if progress and progress.get('page', 0) > first_page:
@@ -101,11 +118,18 @@ def main() -> None:
         choice = input('Continue from here? [y]es / [n]o, start fresh: ').strip().lower()
         if choice != 'n':
             start_page = saved
+            start_sentence = progress.get('sentence', 0)
         print()
+
+    # Load voice model before launching curses so output is visible
+    print(f'Loading voice model ({model_path.name}) ...')
+    from piper.voice import PiperVoice
+    voice = PiperVoice.load(str(model_path))
+    print('Ready.\n')
 
     input('Press Enter to open the player.')
 
-    curses.wrapper(run_player, pdf_path, title, pages, skip_pages, start_page)
+    curses.wrapper(run_player, pdf_path, title, pages, skip_pages, start_page, start_sentence, voice)
 
     print('\nSee you next time.')
 

@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 
 _PROGRESS_DIR = Path.home() / '.config' / 'narrator'
@@ -16,7 +15,7 @@ def load_progress(pdf_path: str) -> dict | None:
         return None
 
 
-def save_progress(pdf_path: str, page: int, total: int, title: str) -> None:
+def save_progress(pdf_path: str, page: int, sentence: int, total: int, title: str) -> None:
     _PROGRESS_DIR.mkdir(parents=True, exist_ok=True)
     data: dict = {}
     if _PROGRESS_FILE.exists():
@@ -24,7 +23,7 @@ def save_progress(pdf_path: str, page: int, total: int, title: str) -> None:
             data = json.loads(_PROGRESS_FILE.read_text())
         except (json.JSONDecodeError, OSError):
             pass
-    data[pdf_path] = {'page': page, 'total': total, 'title': title}
+    data[pdf_path] = {'page': page, 'sentence': sentence, 'total': total, 'title': title}
     _PROGRESS_FILE.write_text(json.dumps(data, indent=2))
 
 

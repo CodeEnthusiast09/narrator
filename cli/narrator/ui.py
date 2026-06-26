@@ -18,6 +18,7 @@ class _State:
     speed: float = 1.0
     paused: bool = False
     done: bool = False
+    error: str | None = None
 
     @property
     def total(self) -> int:
@@ -110,23 +111,30 @@ def _draw(stdscr, state: _State, has_colors: bool) -> None:
         except curses.error:
             pass
 
-        # Status + speed
-        if state.done:
-            status_text = '✓ DONE'
-            attr = (curses.color_pair(2) | curses.A_BOLD) if has_colors else curses.A_BOLD
-        elif state.paused:
-            status_text = '⏸ PAUSED'
-            attr = (curses.color_pair(3) | curses.A_BOLD) if has_colors else curses.A_BOLD
+        # Status + speed  (or error if one occurred)
+        if state.error:
+            err_attr = (curses.color_pair(4) | curses.A_BOLD) if has_colors else curses.A_BOLD
+            try:
+                stdscr.addstr(h - 3, 2, f'ERROR: {state.error}'[:w - 4], err_attr)
+            except curses.error:
+                pass
         else:
-            status_text = '▶ READING'
-            attr = (curses.color_pair(2) | curses.A_BOLD) if has_colors else curses.A_BOLD
+            if state.done:
+                status_text = '✓ DONE'
+                attr = (curses.color_pair(2) | curses.A_BOLD) if has_colors else curses.A_BOLD
+            elif state.paused:
+                status_text = '⏸ PAUSED'
+                attr = (curses.color_pair(3) | curses.A_BOLD) if has_colors else curses.A_BOLD
+            else:
+                status_text = '▶ READING'
+                attr = (curses.color_pair(2) | curses.A_BOLD) if has_colors else curses.A_BOLD
 
-        speed_text = f'  Speed: {state.speed:.2f}x'
-        try:
-            stdscr.addstr(h - 3, 2, status_text, attr)
-            stdscr.addstr(h - 3, 2 + len(status_text), speed_text)
-        except curses.error:
-            pass
+            speed_text = f'  Speed: {state.speed:.2f}x'
+            try:
+                stdscr.addstr(h - 3, 2, status_text, attr)
+                stdscr.addstr(h - 3, 2 + len(status_text), speed_text)
+            except curses.error:
+                pass
 
         # Controls hint
         controls = '[SPACE] Pause  [→] Next  [←] Back  [+/-] Speed  [Q] Quit'
@@ -147,6 +155,8 @@ def run_player(
     pages: list[str],
     skip_pages: set[int],
     start_page: int,
+    start_sentence: int = 0,
+    voice=None,
 ) -> None:
     curses.curs_set(0)
     stdscr.nodelay(True)
@@ -158,6 +168,7 @@ def run_player(
         curses.use_default_colors()
         curses.init_pair(2, curses.COLOR_GREEN, -1)   # reading / done
         curses.init_pair(3, curses.COLOR_YELLOW, -1)  # paused
+        curses.init_pair(4, curses.COLOR_RED, -1)     # error
 
     state = _State(
         title=title,
@@ -167,7 +178,7 @@ def run_player(
         current_page=start_page,
     )
 
-    tts = TTSPlayer()
+    tts = TTSPlayer(voice)
     page_done = threading.Event()
 
     def on_page_done() -> None:
@@ -179,7 +190,7 @@ def run_player(
     def start_reading(sentence_idx: int = 0) -> None:
         tts.speak(sentences(), start_from=sentence_idx, on_complete=on_page_done)
 
-    start_reading()
+    start_reading(start_sentence)
 
     try:
         while True:
@@ -190,11 +201,15 @@ def run_player(
                 time.sleep(0.1)
                 continue
 
+            # Surface TTS errors into the UI
+            if tts.last_error and not state.error:
+                state.error = tts.last_error
+
             # Auto-advance when a page finishes
             if page_done.is_set():
                 page_done.clear()
                 if state.next_page():
-                    save_progress(state.pdf_path, state.current_page, state.total, state.title)
+                    save_progress(state.pdf_path, state.current_page, 0, state.total, state.title)
                     start_reading()
                 else:
                     state.done = True
@@ -216,7 +231,7 @@ def run_player(
                 page_done.clear()
                 state.paused = False
                 if state.next_page():
-                    save_progress(state.pdf_path, state.current_page, state.total, state.title)
+                    save_progress(state.pdf_path, state.current_page, 0, state.total, state.title)
                     start_reading()
                 else:
                     state.done = True
@@ -225,7 +240,7 @@ def run_player(
                 page_done.clear()
                 state.paused = False
                 if state.prev_page():
-                    save_progress(state.pdf_path, state.current_page, state.total, state.title)
+                    save_progress(state.pdf_path, state.current_page, 0, state.total, state.title)
                     start_reading()
 
             elif key in (ord('+'), ord('=')):
@@ -242,4 +257,10 @@ def run_player(
     finally:
         tts.stop()
         if not state.done:
-            save_progress(state.pdf_path, state.current_page, state.total, state.title)
+            save_progress(
+                state.pdf_path,
+                state.current_page,
+                tts.pause_idx,
+                state.total,
+                state.title,
+            )
