@@ -110,6 +110,12 @@ class TTSPlayer:
                 if not sentence:
                     continue
 
+                # Chapter title pause sentinel — sleep instead of speak
+                if sentence == '...':
+                    import time
+                    time.sleep(1.5)
+                    continue
+
                 syn_config = SynthesisConfig(length_scale=round(1.0 / self._speed, 3))
                 chunks = list(self._voice.synthesize(sentence, syn_config=syn_config))
 

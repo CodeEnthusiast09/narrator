@@ -5,6 +5,7 @@ import shutil
 import sys
 from pathlib import Path
 
+from narrator.chapter import build_chapter_map
 from narrator.pdf import extract_pages
 from narrator.progress import load_progress
 from narrator.skip import detect_candidates
@@ -66,8 +67,11 @@ def main() -> None:
         )
         sys.exit(1)
 
-    print(f'  Title : {title}')
-    print(f'  Pages : {len(pages)}\n')
+    chapter_map = build_chapter_map(pages)
+
+    print(f'  Title    : {title}')
+    print(f'  Pages    : {len(pages)}')
+    print(f'  Chapters : {len(chapter_map)}\n')
 
     # Smart skip
     candidates = detect_candidates(pages)
@@ -129,7 +133,7 @@ def main() -> None:
 
     input('Press Enter to open the player.')
 
-    curses.wrapper(run_player, pdf_path, title, pages, skip_pages, start_page, start_sentence, voice)
+    curses.wrapper(run_player, pdf_path, title, pages, skip_pages, chapter_map, start_page, start_sentence, voice)
 
     print('\nSee you next time.')
 

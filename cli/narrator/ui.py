@@ -2,10 +2,13 @@ import curses
 import textwrap
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
+from narrator.chapter import build_chapter_map
 from narrator.progress import save_progress
 from narrator.tts import TTSPlayer, split_sentences
+
+_CHAPTER_PAUSE = '...'  # sentinel inserted after a chapter title to create a spoken pause
 
 
 @dataclass
@@ -15,6 +18,7 @@ class _State:
     skip_pages: set[int]
     pdf_path: str
     current_page: int
+    chapter_map: dict[int, str] = field(default_factory=dict)
     speed: float = 1.0
     paused: bool = False
     done: bool = False
@@ -27,6 +31,13 @@ class _State:
     @property
     def current_text(self) -> str:
         return self.pages[self.current_page]
+
+    @property
+    def current_chapter(self) -> str | None:
+        for p in range(self.current_page, -1, -1):
+            if p in self.chapter_map:
+                return self.chapter_map[p]
+        return None
 
     def next_page(self) -> bool:
         p = self.current_page + 1
@@ -58,8 +69,13 @@ def _draw(stdscr, state: _State, has_colors: bool) -> None:
             return
 
         # Header row
-        safe_title = state.title[:max(0, w - 24)]
-        header = f' NARRATOR  |  {safe_title}'
+        chapter = state.current_chapter
+        if chapter:
+            subtitle = f'{state.title}  ›  {chapter}'
+        else:
+            subtitle = state.title
+        safe_subtitle = subtitle[:max(0, w - 24)]
+        header = f' NARRATOR  |  {safe_subtitle}'
         page_info = f' {state.current_page + 1}/{state.total} '
         try:
             stdscr.addstr(0, 0, header, curses.A_BOLD)
@@ -154,6 +170,7 @@ def run_player(
     title: str,
     pages: list[str],
     skip_pages: set[int],
+    chapter_map: dict[int, str],
     start_page: int,
     start_sentence: int = 0,
     voice=None,
@@ -175,6 +192,7 @@ def run_player(
         pages=pages,
         skip_pages=skip_pages,
         pdf_path=pdf_path,
+        chapter_map=chapter_map,
         current_page=start_page,
     )
 
@@ -185,7 +203,11 @@ def run_player(
         page_done.set()
 
     def sentences() -> list[str]:
-        return split_sentences(state.current_text)
+        chunks = split_sentences(state.current_text)
+        # If this page opens a chapter, insert a pause sentinel after the title chunk
+        if state.current_page in state.chapter_map and chunks:
+            chunks = [chunks[0], _CHAPTER_PAUSE] + chunks[1:]
+        return chunks
 
     def start_reading(sentence_idx: int = 0) -> None:
         tts.speak(sentences(), start_from=sentence_idx, on_complete=on_page_done)
