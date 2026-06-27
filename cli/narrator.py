@@ -146,7 +146,7 @@ def main() -> None:
     start_sentence = 0
     progress = load_progress(pdf_path)
 
-    if progress and progress.get('page', 0) > first_page:
+    if progress and progress.get('page', 0) >= first_page:
         saved = progress['page']
         pct = int((saved + 1) / len(pages) * 100)
         print(
