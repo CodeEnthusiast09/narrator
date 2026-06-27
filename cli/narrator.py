@@ -11,7 +11,26 @@ from narrator.progress import load_progress
 from narrator.skip import detect_candidates
 from narrator.ui import run_player
 
-_DEFAULT_MODEL = Path.home() / '.config' / 'narrator' / 'models' / 'en_US-amy-medium.onnx'
+_MODELS_DIR = Path.home() / '.config' / 'narrator' / 'models'
+_DEFAULT_MODEL = _MODELS_DIR / 'en_US-amy-medium.onnx'
+
+
+def _resolve_voice(name: str) -> Path:
+    """Find a model in the models dir by short name (e.g. 'en-gb' or 'amy')."""
+    needle = name.lower().replace('-', '_')
+    candidates = sorted(_MODELS_DIR.glob('*.onnx'))
+    for path in candidates:
+        stem = path.stem.lower().replace('-', '_')
+        if needle in stem:
+            return path
+    # Nothing matched — show what's available
+    if candidates:
+        names = ', '.join(p.stem for p in candidates)
+        print(f'Error: no model matching "{name}". Available: {names}', file=sys.stderr)
+    else:
+        print(f'Error: no models found in {_MODELS_DIR}', file=sys.stderr)
+        print('Download a model and its .json config into that directory.', file=sys.stderr)
+    sys.exit(1)
 
 
 def main() -> None:
@@ -25,24 +44,39 @@ def main() -> None:
         action='store_true',
         help='Skip front matter automatically without asking',
     )
-    parser.add_argument(
+
+    model_group = parser.add_mutually_exclusive_group()
+    model_group.add_argument(
         '--model',
-        default=str(_DEFAULT_MODEL),
         metavar='PATH',
-        help=f'Path to a piper .onnx voice model (default: {_DEFAULT_MODEL})',
+        help='Explicit path to a piper .onnx voice model',
     )
+    model_group.add_argument(
+        '--voice',
+        metavar='NAME',
+        help='Short voice name to search for in ~/.config/narrator/models/ (e.g. en-gb, amy)',
+    )
+
     args = parser.parse_args()
 
-    model_path = Path(args.model)
-    if not model_path.exists():
-        print(f'Error: voice model not found at {model_path}', file=sys.stderr)
-        print(file=sys.stderr)
-        print('Download a model and its .json config into ~/.config/narrator/models/', file=sys.stderr)
-        print('Example (en_US-amy-medium):', file=sys.stderr)
-        print('  mkdir -p ~/.config/narrator/models && cd ~/.config/narrator/models', file=sys.stderr)
-        print('  wget https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/amy/medium/en_US-amy-medium.onnx', file=sys.stderr)
-        print('  wget https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/amy/medium/en_US-amy-medium.onnx.json', file=sys.stderr)
-        sys.exit(1)
+    if args.model:
+        model_path = Path(args.model)
+        if not model_path.exists():
+            print(f'Error: voice model not found at {model_path}', file=sys.stderr)
+            sys.exit(1)
+    elif args.voice:
+        model_path = _resolve_voice(args.voice)
+    else:
+        model_path = _DEFAULT_MODEL
+        if not model_path.exists():
+            print(f'Error: default voice model not found at {model_path}', file=sys.stderr)
+            print(file=sys.stderr)
+            print('Download a model and its .json config into ~/.config/narrator/models/', file=sys.stderr)
+            print('Example (en_US-amy-medium):', file=sys.stderr)
+            print('  mkdir -p ~/.config/narrator/models && cd ~/.config/narrator/models', file=sys.stderr)
+            print('  wget https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/amy/medium/en_US-amy-medium.onnx', file=sys.stderr)
+            print('  wget https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/amy/medium/en_US-amy-medium.onnx.json', file=sys.stderr)
+            sys.exit(1)
 
     if not args.pdf:
         parser.error('pdf argument is required')
@@ -126,7 +160,7 @@ def main() -> None:
         print()
 
     # Load voice model before launching curses so output is visible
-    print(f'Loading voice model ({model_path.name}) ...')
+    print(f'Loading voice model ({model_path.stem}) ...')
     from piper.voice import PiperVoice
     voice = PiperVoice.load(str(model_path))
     print('Ready.\n')
