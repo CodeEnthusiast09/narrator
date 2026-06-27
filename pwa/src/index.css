@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #0f0f0f;
+  --color-surface: #1a1a1a;
+  --color-raised: #242424;
+  --color-border: #2a2a2a;
+  --color-fg: #e4e4e7;
+  --color-muted: #71717a;
+  --color-accent: #818cf8;
+  --color-accent-dim: #3730a3;
+
+  --spacing-wrapper: 1rem;
+  --spacing-wrapper-md: 1.7rem;
+
+  --breakpoint-xs: 400px;
+  --breakpoint-3xl: 1536px;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+  background-color: #0f0f0f;
+  color: #e4e4e7;
+  font-family: system-ui, -apple-system, sans-serif;
+}
