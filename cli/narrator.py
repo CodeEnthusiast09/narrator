@@ -167,7 +167,12 @@ def main() -> None:
 
     input('Press Enter to open the player.')
 
-    curses.wrapper(run_player, pdf_path, title, pages, skip_pages, chapter_map, start_page, start_sentence, voice)
+    if start_sentence == 0 and start_page == first_page:
+        announce = f'Now reading: {title}.'
+    else:
+        announce = f'Continuing {title}.'
+
+    curses.wrapper(run_player, pdf_path, title, pages, skip_pages, chapter_map, start_page, start_sentence, voice, announce)
 
     print('\nSee you next time.')
 

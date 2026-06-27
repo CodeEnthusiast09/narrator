@@ -1,14 +1,11 @@
 import curses
-import textwrap
 import threading
 import time
 from dataclasses import dataclass, field
 
 from narrator.chapter import build_chapter_map
 from narrator.progress import save_progress
-from narrator.tts import TTSPlayer, split_sentences
-
-_CHAPTER_PAUSE = '...'  # sentinel inserted after a chapter title to create a spoken pause
+from narrator.tts import CHAPTER_PAUSE, PARA_PAUSE, TTSPlayer, build_page_sentences
 
 
 @dataclass
@@ -58,7 +55,13 @@ class _State:
         return False
 
 
-def _draw(stdscr, state: _State, has_colors: bool) -> None:
+def _draw(
+    stdscr,
+    state: _State,
+    has_colors: bool,
+    page_sents: list[str] | None = None,
+    display_idx: int = 0,
+) -> None:
     try:
         stdscr.erase()
         h, w = stdscr.getmaxyx()
@@ -100,23 +103,50 @@ def _draw(stdscr, state: _State, has_colors: bool) -> None:
         except curses.error:
             pass
 
-        # Page text
+        # Page text — sentence-level highlighting with auto-scroll
         text_start = 3
         footer_rows = 4
         text_h = max(0, h - text_start - footer_rows)
         text_w = max(10, w - 4)
 
-        lines: list[str] = []
-        for para in state.current_text.split('\n'):
-            stripped = para.strip()
-            if stripped:
-                lines.extend(textwrap.wrap(stripped, text_w))
-            elif lines and lines[-1] != '':
-                lines.append('')
+        sents = page_sents or []
+        is_reading = not state.paused and not state.done and state.error is None
 
-        for i, line in enumerate(lines[:text_h]):
+        # Layout pass: flow tokens into (row, col, token, is_active) tuples
+        layout: list[tuple[int, int, str, bool]] = []
+        row, col, active_row = 0, 0, 0
+        for i, sent in enumerate(sents):
+            is_active = is_reading and i == display_idx
+            if is_active:
+                active_row = row
+            if sent in (CHAPTER_PAUSE, PARA_PAUSE):
+                row += 1
+                col = 0
+                continue
+            for word in sent.split():
+                token = word + ' '
+                if col + len(token) > text_w:
+                    row += 1
+                    col = 0
+                layout.append((row, col, token, is_active))
+                col += len(token)
+
+        # Scroll to keep active sentence in upper third
+        scroll = max(0, active_row - text_h // 3)
+
+        # Render pass
+        for r, c, token, is_active in layout:
+            display_row = r - scroll + text_start
+            if display_row < text_start or display_row >= text_start + text_h:
+                continue
+            if is_active and has_colors:
+                attr = curses.color_pair(5) | curses.A_BOLD
+            elif is_active:
+                attr = curses.A_BOLD
+            else:
+                attr = curses.A_DIM
             try:
-                stdscr.addstr(text_start + i, 2, line)
+                stdscr.addstr(display_row, c + 2, token, attr)
             except curses.error:
                 pass
 
@@ -174,6 +204,7 @@ def run_player(
     start_page: int,
     start_sentence: int = 0,
     voice=None,
+    announce: str = '',
 ) -> None:
     curses.curs_set(0)
     stdscr.nodelay(True)
@@ -186,6 +217,7 @@ def run_player(
         curses.init_pair(2, curses.COLOR_GREEN, -1)   # reading / done
         curses.init_pair(3, curses.COLOR_YELLOW, -1)  # paused
         curses.init_pair(4, curses.COLOR_RED, -1)     # error
+        curses.init_pair(5, curses.COLOR_WHITE, -1)   # active sentence
 
     state = _State(
         title=title,
@@ -198,26 +230,34 @@ def run_player(
 
     tts = TTSPlayer(voice)
     page_done = threading.Event()
+    announce_offset = 0  # how many leading sentences belong to the announcement
 
     def on_page_done() -> None:
         page_done.set()
 
-    def sentences() -> list[str]:
-        chunks = split_sentences(state.current_text)
-        # If this page opens a chapter, insert a pause sentinel after the title chunk
+    def page_sents() -> list[str]:
+        """Sentences for the current page, without any announcement prefix."""
+        chunks = build_page_sentences(state.current_text)
         if state.current_page in state.chapter_map and chunks:
-            chunks = [chunks[0], _CHAPTER_PAUSE] + chunks[1:]
+            chunks = [chunks[0], CHAPTER_PAUSE] + chunks[1:]
         return chunks
 
-    def start_reading(sentence_idx: int = 0) -> None:
-        tts.speak(sentences(), start_from=sentence_idx, on_complete=on_page_done)
+    def start_reading(sentence_idx: int = 0, first: bool = False) -> None:
+        nonlocal announce_offset
+        sents = page_sents()
+        if first and announce:
+            announce_offset = 2  # [announce, CHAPTER_PAUSE] prefix
+            tts.speak([announce, CHAPTER_PAUSE] + sents, start_from=sentence_idx, on_complete=on_page_done)
+        else:
+            announce_offset = 0
+            tts.speak(sents, start_from=sentence_idx, on_complete=on_page_done)
 
-    start_reading(start_sentence)
+    start_reading(start_sentence, first=True)
 
     try:
         while True:
             if state.done:
-                _draw(stdscr, state, has_colors)
+                _draw(stdscr, state, has_colors, page_sents(), 0)
                 if stdscr.getch() in (ord('q'), ord('Q')):
                     break
                 time.sleep(0.1)
@@ -244,7 +284,7 @@ def run_player(
             elif key == ord(' '):
                 if state.paused:
                     state.paused = False
-                    tts.resume(sentences(), on_complete=on_page_done)
+                    tts.resume(page_sents(), on_complete=on_page_done)
                 else:
                     state.paused = True
                     tts.pause()
@@ -273,7 +313,8 @@ def run_player(
                 tts.speed -= 0.25
                 state.speed = tts.speed
 
-            _draw(stdscr, state, has_colors)
+            display_idx = max(0, tts.pause_idx - announce_offset)
+            _draw(stdscr, state, has_colors, page_sents(), display_idx)
             time.sleep(0.05)
 
     finally:

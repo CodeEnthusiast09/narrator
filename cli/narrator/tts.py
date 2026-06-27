@@ -6,6 +6,8 @@ if TYPE_CHECKING:
     from piper.voice import PiperVoice
 
 _MAX_CHUNK_WORDS = 18
+CHAPTER_PAUSE = '...'
+PARA_PAUSE = '[p]'
 
 
 def split_sentences(text: str) -> list[str]:
@@ -28,6 +30,22 @@ def split_sentences(text: str) -> list[str]:
             clauses = re.split(r'(?<=[,;:])\s+', part)
             chunks.extend(c.strip() for c in clauses if c.strip())
     return chunks if chunks else [text]
+
+
+def build_page_sentences(text: str) -> list[str]:
+    """Split a page into sentences, inserting PARA_PAUSE between paragraphs."""
+    paragraphs = re.split(r'\n{2,}', text)
+    result: list[str] = []
+    first = True
+    for para in paragraphs:
+        stripped = para.replace('\n', ' ').strip()
+        if not stripped:
+            continue
+        if not first:
+            result.append(PARA_PAUSE)
+        result.extend(split_sentences(stripped))
+        first = False
+    return result if result else split_sentences(text)
 
 
 class TTSPlayer:
@@ -110,10 +128,14 @@ class TTSPlayer:
                 if not sentence:
                     continue
 
-                # Chapter title pause sentinel — sleep instead of speak
-                if sentence == '...':
+                # Pause sentinels — sleep instead of speak
+                if sentence == CHAPTER_PAUSE:
                     import time
                     time.sleep(1.5)
+                    continue
+                if sentence == PARA_PAUSE:
+                    import time
+                    time.sleep(0.35)
                     continue
 
                 syn_config = SynthesisConfig(length_scale=round(1.0 / self._speed, 3))

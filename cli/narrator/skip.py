@@ -19,6 +19,18 @@ _FRONT_MATTER_KEYWORDS = {
     'published by',
     'first published',
     'printed in',
+    'about the publisher',
+    'about the author',
+    'also by ',
+    'other books by',
+    'by the same author',
+    'transcribed by',
+    'volume one',
+    'volume two',
+    'volume three',
+    'volume i ',
+    'volume ii ',
+    'volume iii ',
 }
 
 # Lines that look like "Chapter Title ............. 12" or "Chapter Title    12"
@@ -54,5 +66,8 @@ def _is_front_matter(text: str) -> bool:
     word_count = len(text.split())
     if word_count > 350:
         return False
+    # Very short pages are title cards, publisher stamps, or filler — always skip
+    if word_count < 15:
+        return True
     lower = text.lower()
     return any(kw in lower for kw in _FRONT_MATTER_KEYWORDS)
