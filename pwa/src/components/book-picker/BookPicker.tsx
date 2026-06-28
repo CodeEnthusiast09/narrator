@@ -19,20 +19,28 @@ export function BookPicker({ onFile, onLibraryEntry, error }: Props) {
   const { entries, remove } = useLibrary();
 
   const openWithPicker = async () => {
-    const picker = (window as unknown as { showOpenFilePicker?: FilePicker }).showOpenFilePicker;
-    if (picker) {
-      try {
-        const [handle] = await picker({
-          types: [{ description: 'PDF Files', accept: { 'application/pdf': ['.pdf'] } }],
-          multiple: false,
-        });
-        const file = await handle.getFile();
-        onFile(file, handle);
-      } catch (e) {
-        if ((e as Error).name !== 'AbortError') inputRef.current?.click();
-      }
-    } else {
+    const w = window as unknown as { showOpenFilePicker?: FilePicker };
+
+    // Synchronous fallback — must happen BEFORE any await so the gesture context is still alive.
+    if (!w.showOpenFilePicker) {
       inputRef.current?.click();
+      return;
+    }
+
+    try {
+      const [handle] = await w.showOpenFilePicker({
+        types: [{ description: 'PDF Files', accept: { 'application/pdf': ['.pdf'] } }],
+        multiple: false,
+      });
+      const file = await handle.getFile();
+      onFile(file, handle);
+    } catch (e) {
+      // AbortError = user cancelled — do nothing.
+      // Any other failure: the gesture is expired so we can't trigger the input here.
+      if ((e as Error).name !== 'AbortError') {
+        // Surface the error so the user knows to try again.
+        console.warn('showOpenFilePicker failed:', e);
+      }
     }
   };
 

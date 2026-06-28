@@ -3,7 +3,7 @@ import { buildChapterMap } from '@/lib/chapter';
 import { extractPages } from '@/lib/pdf';
 import { saveToLibrary, updateLibraryProgress } from '@/lib/library';
 import { loadProgress, saveProgress } from '@/lib/progress';
-import { buildPageSentences, CHAPTER_PAUSE } from '@/lib/sentences';
+import { buildPageSentences, splitSentences, CHAPTER_PAUSE } from '@/lib/sentences';
 import { detectCandidates } from '@/lib/skip';
 import { useTTS } from './useTTS';
 import type { Book, LibraryEntry, PlayerStatus, Progress } from '@/interfaces';
@@ -34,10 +34,24 @@ export interface PlayerControls {
 
 function pageSentences(book: Book, page: number): string[] {
   const chunks = buildPageSentences(book.pages[page] ?? '');
-  if (page in book.chapterMap && chunks.length > 0) {
-    return [chunks[0], CHAPTER_PAUSE, ...chunks.slice(1)];
+  if (!(page in book.chapterMap) || chunks.length === 0) return chunks;
+
+  const title = book.chapterMap[page];
+  const first = chunks[0];
+
+  // PDFs sometimes paste the chapter title directly onto the first line of body text
+  // with no newline separator (e.g. "PROLOGUE "We should start back…"). Detect this
+  // and split the title out so it gets its own pause before the story begins.
+  if (
+    first.toLowerCase().startsWith(title.toLowerCase()) &&
+    first.length > title.length + 1
+  ) {
+    const rest = first.slice(title.length).trimStart();
+    const restChunks = rest ? splitSentences(rest) : [];
+    return [title, CHAPTER_PAUSE, ...restChunks, ...chunks.slice(1)];
   }
-  return chunks;
+
+  return [first, CHAPTER_PAUSE, ...chunks.slice(1)];
 }
 
 function firstReadablePage(book: Book): number {

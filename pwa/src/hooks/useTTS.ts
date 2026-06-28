@@ -14,16 +14,24 @@ function pickVoice(all: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
     MALE_HINTS.some((h) => v.name.toLowerCase().includes(h));
   const isNgEn = (v: SpeechSynthesisVoice) =>
     v.lang.toLowerCase().replace('_', '-').startsWith('en-ng');
+  const isEn = (v: SpeechSynthesisVoice) =>
+    v.lang.toLowerCase().startsWith('en');
   // 1. en-NG male
   const ngMale = all.find((v) => isNgEn(v) && isMale(v));
   if (ngMale) return ngMale;
   // 2. any en-NG
   const ng = all.find((v) => isNgEn(v));
   if (ng) return ng;
-  // 3. English male in preferred pool
-  const enMale = pool.find((v) => v.lang.toLowerCase().startsWith('en') && isMale(v));
-  if (enMale) return enMale;
-  // 4. first in preferred pool
+  // 3. English male in local pool
+  const localMale = pool.find((v) => isEn(v) && isMale(v));
+  if (localMale) return localMale;
+  // 4. English male in ALL voices (network voices count)
+  const anyMale = all.find((v) => isEn(v) && isMale(v));
+  if (anyMale) return anyMale;
+  // 5. first local English voice
+  const localEn = pool.find((v) => isEn(v));
+  if (localEn) return localEn;
+  // 6. first in preferred pool
   return pool[0];
 }
 
