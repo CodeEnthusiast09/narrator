@@ -44,6 +44,14 @@ export function BookPicker({ onFile, onLibraryEntry, error }: Props) {
     }
   };
 
+  const handleLibraryEntry = (entry: LibraryEntry) => {
+    if (entry.handle) {
+      onLibraryEntry(entry);
+    } else {
+      openWithPicker();
+    }
+  };
+
   const hasShelf = entries.length > 0;
 
   return (
@@ -73,7 +81,7 @@ export function BookPicker({ onFile, onLibraryEntry, error }: Props) {
       {/* Recent books shelf */}
       {hasShelf && (
         <div className="w-full">
-          <BookShelf entries={entries} onOpen={onLibraryEntry} onRemove={remove} />
+          <BookShelf entries={entries} onOpen={handleLibraryEntry} onRemove={remove} />
         </div>
       )}
 

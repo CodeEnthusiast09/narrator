@@ -22,7 +22,7 @@ export interface PlayerControls {
   openFile: (file: File, handle?: FileSystemFileHandle) => void;
   openLibraryEntry: (entry: LibraryEntry) => void;
   seekTo: (sentenceIdx: number) => void;
-  sleepTimer: { minutesLeft: number | null; set: (minutes: number | null) => void };
+  sleepTimer: { minutesLeft: number | null; selected: number | null; set: (minutes: number | null) => void };
   toggleFrontMatterSkip: (page: number) => void;
   confirmFrontMatter: () => void;
   skipAllFrontMatter: () => void;

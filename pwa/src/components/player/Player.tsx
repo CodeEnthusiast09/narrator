@@ -281,8 +281,8 @@ export function Player({ player }: Props) {
               {SLEEP_OPTIONS.map(({ label, value }) => {
                 const active =
                   value === null
-                    ? sleepTimer.minutesLeft === null
-                    : sleepTimer.minutesLeft !== null && value === sleepTimer.minutesLeft;
+                    ? sleepTimer.selected === null
+                    : sleepTimer.selected === value;
                 return (
                   <button
                     key={label}
