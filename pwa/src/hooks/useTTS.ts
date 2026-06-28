@@ -4,6 +4,29 @@ import { CHAPTER_PAUSE, PARA_PAUSE } from '@/lib/sentences';
 const CHAPTER_PAUSE_MS = 1500;
 const PARA_PAUSE_MS = 350;
 
+const MALE_HINTS = ['male', 'david', 'james', 'mark', 'daniel', 'guy', 'fred', 'alex', 'eric', 'george'];
+
+function pickVoice(all: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  if (all.length === 0) return null;
+  const local = all.filter((v) => v.localService);
+  const pool = local.length > 0 ? local : all;
+  const isMale = (v: SpeechSynthesisVoice) =>
+    MALE_HINTS.some((h) => v.name.toLowerCase().includes(h));
+  const isNgEn = (v: SpeechSynthesisVoice) =>
+    v.lang.toLowerCase().replace('_', '-').startsWith('en-ng');
+  // 1. en-NG male
+  const ngMale = all.find((v) => isNgEn(v) && isMale(v));
+  if (ngMale) return ngMale;
+  // 2. any en-NG
+  const ng = all.find((v) => isNgEn(v));
+  if (ng) return ng;
+  // 3. English male in preferred pool
+  const enMale = pool.find((v) => v.lang.toLowerCase().startsWith('en') && isMale(v));
+  if (enMale) return enMale;
+  // 4. first in preferred pool
+  return pool[0];
+}
+
 export interface TTSControls {
   speak: (sentences: string[], startFrom: number, onComplete: () => void) => void;
   pause: () => void;
@@ -40,9 +63,12 @@ export function useTTS(): TTSControls {
       const local = all.filter((v) => v.localService);
       const list = local.length > 0 ? local : all;
       setVoices(list);
-      if (!r.current.voice && list[0]) {
-        r.current.voice = list[0];
-        setSelectedVoice(list[0]);
+      if (!r.current.voice) {
+        const picked = pickVoice(all);
+        if (picked) {
+          r.current.voice = picked;
+          setSelectedVoice(picked);
+        }
       }
     };
     speechSynthesis.addEventListener('voiceschanged', load);
@@ -94,11 +120,11 @@ export function useTTS(): TTSControls {
     // Lazily pick a voice if voices weren't loaded at init time
     if (!state.voice) {
       const available = speechSynthesis.getVoices();
-      const local = available.filter((v) => v.localService);
-      const picked = (local.length > 0 ? local : available)[0] ?? null;
+      const picked = pickVoice(available);
       if (picked) {
         state.voice = picked;
         setSelectedVoice(picked);
+        const local = available.filter((v) => v.localService);
         setVoices(local.length > 0 ? local : available);
       }
     }
