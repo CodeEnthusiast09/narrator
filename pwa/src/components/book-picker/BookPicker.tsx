@@ -17,7 +17,10 @@ export function BookPicker({ onFile, error }: Props) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full bg-canvas px-wrapper-md gap-8">
+    <div
+      className="flex flex-col items-center justify-center h-full bg-canvas px-wrapper-md gap-8"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       <div className="flex flex-col items-center gap-3 select-none">
         <svg
           className="w-16 h-16 text-accent opacity-90"
