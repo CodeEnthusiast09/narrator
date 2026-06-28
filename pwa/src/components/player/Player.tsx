@@ -6,6 +6,19 @@ interface Props {
   player: PlayerControls;
 }
 
+const FONT_SIZES = ['0.875rem', '1rem', '1.125rem', '1.25rem', '1.5rem'];
+const FONT_LABELS = ['xs', 'S', 'M', 'L', 'XL'];
+const SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+const PITCHES = [0.5, 0.75, 1.0, 1.25, 1.5];
+const SLEEP_OPTIONS: Array<{ label: string; value: number | null }> = [
+  { label: 'Off', value: null },
+  { label: '5m', value: 5 },
+  { label: '10m', value: 10 },
+  { label: '15m', value: 15 },
+  { label: '30m', value: 30 },
+  { label: '60m', value: 60 },
+];
+
 export function Player({ player }: Props) {
   const {
     status, book, currentPage, currentSentences, tts,
@@ -13,11 +26,19 @@ export function Player({ player }: Props) {
     savedProgress,
     toggleFrontMatterSkip, confirmFrontMatter, skipAllFrontMatter, keepAllFrontMatter,
     confirmResume,
+    seekTo, sleepTimer,
     pause, resume, nextPage, prevPage, close,
   } = player;
 
   const [showSettings, setShowSettings] = useState(false);
+  const [fontSizeIdx, setFontSizeIdx] = useState(() =>
+    Number(localStorage.getItem('narrator_font_size') ?? '1'),
+  );
   const sentenceRefs = useRef<Map<number, HTMLSpanElement>>(new Map());
+
+  useEffect(() => {
+    localStorage.setItem('narrator_font_size', String(fontSizeIdx));
+  }, [fontSizeIdx]);
 
   // Auto-scroll active sentence into view
   useEffect(() => {
@@ -39,10 +60,8 @@ export function Player({ player }: Props) {
   const isPlaying = status === 'reading';
   const isDone = status === 'done';
   const isLoading = status === 'loading';
-  const showOverlay =
-    status === 'front-matter' || status === 'resume' || isDone || isLoading;
-
-  const SPEEDS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+  const canSeek = status === 'reading' || status === 'paused';
+  const showOverlay = status === 'front-matter' || status === 'resume' || isDone || isLoading;
 
   return (
     <div className="flex flex-col h-full bg-canvas select-none">
@@ -66,9 +85,17 @@ export function Player({ player }: Props) {
           </p>
         </div>
 
-        <span className="text-xs text-muted tabular-nums whitespace-nowrap">
-          {currentPage + 1}/{total}
-        </span>
+        <div className="flex items-center gap-2">
+          {/* Sleep timer indicator */}
+          {sleepTimer.minutesLeft !== null && (
+            <span className="text-xs text-accent tabular-nums">
+              {sleepTimer.minutesLeft}m
+            </span>
+          )}
+          <span className="text-xs text-muted tabular-nums whitespace-nowrap">
+            {currentPage + 1}/{total}
+          </span>
+        </div>
       </div>
 
       {/* Progress bar */}
@@ -79,9 +106,9 @@ export function Player({ player }: Props) {
         />
       </div>
 
-      {/* Page text — sentence-level highlighting */}
+      {/* Page text — sentence-level highlighting, tap-to-seek */}
       <div className="flex-1 overflow-y-auto px-wrapper-md py-5">
-        <p className="text-base leading-relaxed break-words">
+        <p className="leading-relaxed break-words" style={{ fontSize: FONT_SIZES[fontSizeIdx] }}>
           {currentSentences.map((s, i) => {
             if (s === CHAPTER_PAUSE) return <span key={i} className="block h-5" />;
             if (s === PARA_PAUSE) return <span key={i} className="block h-3" />;
@@ -95,10 +122,10 @@ export function Player({ player }: Props) {
                 }}
                 className={[
                   'transition-colors duration-300',
-                  isActive
-                    ? 'text-accent'
-                    : 'text-fg/70',
+                  canSeek ? 'cursor-pointer' : '',
+                  isActive ? 'text-accent' : 'text-fg/70',
                 ].join(' ')}
+                onClick={() => canSeek && seekTo(i)}
               >
                 {s}{' '}
               </span>
@@ -108,10 +135,9 @@ export function Player({ player }: Props) {
       </div>
 
       {/* Controls */}
-      <div className="shrink-0 border-t border-border bg-surface px-4 pb-6 pt-3">
+      <div className="shrink-0 border-t border-border bg-surface px-4 pb-6 pt-3"
+           style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
         <div className="flex items-center justify-between">
-
-          {/* Prev */}
           <button
             className="p-3 text-muted active:text-fg transition-colors disabled:opacity-30"
             onClick={prevPage}
@@ -123,7 +149,6 @@ export function Player({ player }: Props) {
             </svg>
           </button>
 
-          {/* Play / Pause */}
           <button
             className="w-16 h-16 rounded-full bg-accent flex items-center justify-center active:bg-accent/80 transition-colors shadow-lg"
             onClick={isPlaying ? pause : resume}
@@ -140,7 +165,6 @@ export function Player({ player }: Props) {
             )}
           </button>
 
-          {/* Next */}
           <button
             className="p-3 text-muted active:text-fg transition-colors disabled:opacity-30"
             onClick={nextPage}
@@ -161,9 +185,7 @@ export function Player({ player }: Props) {
                 key={s}
                 className={[
                   'px-2 py-1 rounded text-xs font-medium transition-colors',
-                  tts.speed === s
-                    ? 'bg-accent text-canvas'
-                    : 'text-muted active:text-fg',
+                  tts.speed === s ? 'bg-accent text-canvas' : 'text-muted active:text-fg',
                 ].join(' ')}
                 onClick={() => tts.setSpeed(s)}
               >
@@ -189,10 +211,10 @@ export function Player({ player }: Props) {
       {showSettings && (
         <div className="fixed inset-0 z-40 flex items-end" onClick={() => setShowSettings(false)}>
           <div
-            className="w-full bg-surface rounded-t-2xl border-t border-border p-6 max-h-[60vh] overflow-y-auto"
+            className="w-full bg-surface rounded-t-2xl border-t border-border p-6 max-h-[75vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between mb-6">
               <h2 className="text-fg font-semibold text-base">Settings</h2>
               <button className="text-muted" onClick={() => setShowSettings(false)}>
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -201,9 +223,83 @@ export function Player({ player }: Props) {
               </button>
             </div>
 
-            {tts.voices.length === 0 ? (
-              <p className="text-muted text-sm">No voices available on this device.</p>
-            ) : (
+            {/* Font size */}
+            <p className="text-muted text-xs uppercase tracking-widest mb-3">Text size</p>
+            <div className="flex items-center gap-2 mb-6">
+              <button
+                className="w-10 h-10 rounded-xl border border-border text-fg text-base font-bold active:bg-raised transition-colors disabled:opacity-30"
+                onClick={() => setFontSizeIdx((i) => Math.max(0, i - 1))}
+                disabled={fontSizeIdx === 0}
+              >
+                A-
+              </button>
+              <div className="flex-1 flex gap-1">
+                {FONT_LABELS.map((label, idx) => (
+                  <button
+                    key={idx}
+                    className={[
+                      'flex-1 py-2 rounded-lg text-xs font-medium transition-colors',
+                      fontSizeIdx === idx ? 'bg-accent text-canvas' : 'text-muted active:bg-raised',
+                    ].join(' ')}
+                    onClick={() => setFontSizeIdx(idx)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <button
+                className="w-10 h-10 rounded-xl border border-border text-fg text-base font-bold active:bg-raised transition-colors disabled:opacity-30"
+                onClick={() => setFontSizeIdx((i) => Math.min(FONT_SIZES.length - 1, i + 1))}
+                disabled={fontSizeIdx === FONT_SIZES.length - 1}
+              >
+                A+
+              </button>
+            </div>
+
+            {/* Pitch */}
+            <p className="text-muted text-xs uppercase tracking-widest mb-3">Pitch</p>
+            <div className="flex gap-1 mb-6">
+              {PITCHES.map((p) => (
+                <button
+                  key={p}
+                  className={[
+                    'flex-1 py-2 rounded-lg text-xs font-medium transition-colors',
+                    tts.pitch === p ? 'bg-accent text-canvas' : 'text-muted active:bg-raised',
+                  ].join(' ')}
+                  onClick={() => tts.setPitch(p)}
+                >
+                  {p === 1.0 ? '1×' : `${p}×`}
+                </button>
+              ))}
+            </div>
+
+            {/* Sleep timer */}
+            <p className="text-muted text-xs uppercase tracking-widest mb-3">
+              Sleep timer{sleepTimer.minutesLeft !== null ? ` — ${sleepTimer.minutesLeft}m left` : ''}
+            </p>
+            <div className="flex gap-1 mb-6">
+              {SLEEP_OPTIONS.map(({ label, value }) => {
+                const active =
+                  value === null
+                    ? sleepTimer.minutesLeft === null
+                    : sleepTimer.minutesLeft !== null && value === sleepTimer.minutesLeft;
+                return (
+                  <button
+                    key={label}
+                    className={[
+                      'flex-1 py-2 rounded-lg text-xs font-medium transition-colors',
+                      active ? 'bg-accent text-canvas' : 'text-muted active:bg-raised',
+                    ].join(' ')}
+                    onClick={() => sleepTimer.set(value)}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Voice */}
+            {tts.voices.length > 0 && (
               <>
                 <p className="text-muted text-xs uppercase tracking-widest mb-3">Voice</p>
                 <div className="flex flex-col gap-1">
@@ -234,7 +330,6 @@ export function Player({ player }: Props) {
         <div className="fixed inset-0 z-50 bg-black/70 flex items-end">
           <div className="w-full bg-surface rounded-t-2xl border-t border-border p-6 max-h-[80vh] overflow-y-auto">
 
-            {/* Loading */}
             {status === 'loading' && (
               <div className="flex flex-col items-center gap-4 py-6">
                 <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -243,7 +338,6 @@ export function Player({ player }: Props) {
               </div>
             )}
 
-            {/* Front matter */}
             {status === 'front-matter' && (
               <>
                 <h2 className="text-fg font-semibold text-base mb-1">Front matter detected</h2>
@@ -259,12 +353,10 @@ export function Player({ player }: Props) {
                         className="flex items-start gap-3 text-left p-3 rounded-lg bg-raised active:bg-border transition-colors"
                         onClick={() => toggleFrontMatterSkip(idx)}
                       >
-                        <div
-                          className={[
-                            'mt-0.5 w-5 h-5 rounded shrink-0 border flex items-center justify-center transition-colors',
-                            checked ? 'bg-accent border-accent' : 'border-border',
-                          ].join(' ')}
-                        >
+                        <div className={[
+                          'mt-0.5 w-5 h-5 rounded shrink-0 border flex items-center justify-center transition-colors',
+                          checked ? 'bg-accent border-accent' : 'border-border',
+                        ].join(' ')}>
                           {checked && (
                             <svg className="w-3 h-3 text-canvas" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                               <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
@@ -302,7 +394,6 @@ export function Player({ player }: Props) {
               </>
             )}
 
-            {/* Resume */}
             {status === 'resume' && savedProgress && (
               <>
                 <div className="flex items-center gap-3 mb-4">
@@ -336,7 +427,6 @@ export function Player({ player }: Props) {
               </>
             )}
 
-            {/* Done */}
             {isDone && (
               <div className="flex flex-col items-center gap-4 py-6">
                 <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center">

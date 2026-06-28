@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSleepTimer } from './useSleepTimer';
 import { buildChapterMap } from '@/lib/chapter';
 import { extractPages } from '@/lib/pdf';
 import { saveToLibrary, updateLibraryProgress } from '@/lib/library';
@@ -20,6 +21,8 @@ export interface PlayerControls {
   tts: ReturnType<typeof useTTS>;
   openFile: (file: File, handle?: FileSystemFileHandle) => void;
   openLibraryEntry: (entry: LibraryEntry) => void;
+  seekTo: (sentenceIdx: number) => void;
+  sleepTimer: { minutesLeft: number | null; set: (minutes: number | null) => void };
   toggleFrontMatterSkip: (page: number) => void;
   confirmFrontMatter: () => void;
   skipAllFrontMatter: () => void;
@@ -252,10 +255,17 @@ export function usePlayer(): PlayerControls {
     [savedProgress, startReading],
   );
 
+  const seekTo = useCallback((idx: number) => {
+    ttsRef.current.seekTo(idx);
+    setStatus('reading');
+  }, []);
+
   const pause = useCallback(() => {
     ttsRef.current.pause();
     setStatus('paused');
   }, []);
+
+  const sleepTimer = useSleepTimer(pause);
 
   const resume = useCallback(() => {
     ttsRef.current.resume();
@@ -349,6 +359,8 @@ export function usePlayer(): PlayerControls {
     tts,
     openFile,
     openLibraryEntry,
+    seekTo,
+    sleepTimer,
     toggleFrontMatterSkip,
     confirmFrontMatter,
     skipAllFrontMatter,

@@ -40,9 +40,12 @@ export interface TTSControls {
   pause: () => void;
   resume: () => void;
   stop: () => void;
+  seekTo: (idx: number) => void;
   pauseIdx: number;
   speed: number;
   setSpeed: (speed: number) => void;
+  pitch: number;
+  setPitch: (pitch: number) => void;
   voices: SpeechSynthesisVoice[];
   selectedVoice: SpeechSynthesisVoice | null;
   setVoice: (voice: SpeechSynthesisVoice) => void;
@@ -52,6 +55,7 @@ export function useTTS(): TTSControls {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [speed, setSpeedState] = useState(1.0);
+  const [pitch, setPitchState] = useState(() => Number(localStorage.getItem('narrator_pitch') ?? '1'));
   const [pauseIdx, setPauseIdx] = useState(0);
 
   const r = useRef({
@@ -61,6 +65,7 @@ export function useTTS(): TTSControls {
     stopped: true,
     onComplete: null as (() => void) | null,
     speed: 1.0,
+    pitch: Number(localStorage.getItem('narrator_pitch') ?? '1'),
     voice: null as SpeechSynthesisVoice | null,
     timer: null as ReturnType<typeof setTimeout> | null,
   });
@@ -139,6 +144,7 @@ export function useTTS(): TTSControls {
 
     const utterance = new SpeechSynthesisUtterance(sentence);
     utterance.rate = state.speed;
+    utterance.pitch = state.pitch;
     if (state.voice) utterance.voice = state.voice;
 
     utterance.onend = () => {
@@ -199,10 +205,27 @@ export function useTTS(): TTSControls {
     setPauseIdx(0);
   }, [cancelAll]);
 
+  const seekTo = useCallback((idx: number) => {
+    cancelAll();
+    const state = r.current;
+    state.idx = idx;
+    state.paused = false;
+    state.stopped = false;
+    setPauseIdx(idx);
+    tickRef.current();
+  }, [cancelAll]);
+
   const setSpeed = useCallback((s: number) => {
     const clamped = Math.max(0.5, Math.min(3.0, Math.round(s * 4) / 4));
     r.current.speed = clamped;
     setSpeedState(clamped);
+  }, []);
+
+  const setPitch = useCallback((p: number) => {
+    const clamped = Math.max(0.5, Math.min(2.0, Math.round(p * 4) / 4));
+    r.current.pitch = clamped;
+    setPitchState(clamped);
+    localStorage.setItem('narrator_pitch', String(clamped));
   }, []);
 
   const setVoice = useCallback((voice: SpeechSynthesisVoice) => {
@@ -210,5 +233,5 @@ export function useTTS(): TTSControls {
     setSelectedVoice(voice);
   }, []);
 
-  return { speak, pause, resume, stop, pauseIdx, speed, setSpeed, voices, selectedVoice, setVoice };
+  return { speak, pause, resume, stop, seekTo, pauseIdx, speed, setSpeed, pitch, setPitch, voices, selectedVoice, setVoice };
 }
