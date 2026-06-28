@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useInstallPrompt } from '@/hooks/useInstallPrompt';
 
 interface Props {
   onFile: (file: File) => void;
@@ -8,6 +9,7 @@ interface Props {
 export function BookPicker({ onFile, error }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const { canInstall, install, dismiss } = useInstallPrompt();
 
   const handleFiles = (files: FileList | null) => {
     const file = files?.[0];
@@ -77,6 +79,44 @@ export function BookPicker({ onFile, error }: Props) {
 
       {error && (
         <p className="text-red-400 text-sm text-center max-w-xs">{error}</p>
+      )}
+
+      {canInstall && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-sm px-4">
+          <div className="flex items-center gap-3 bg-raised border border-border rounded-2xl px-4 py-3 shadow-lg">
+            <svg
+              className="w-5 h-5 text-accent shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+              />
+            </svg>
+            <p className="text-fg text-sm flex-1 leading-snug">
+              Install for a better experience
+            </p>
+            <button
+              onClick={install}
+              className="text-accent text-sm font-semibold shrink-0"
+            >
+              Install
+            </button>
+            <button
+              onClick={dismiss}
+              aria-label="Dismiss"
+              className="text-muted shrink-0"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
