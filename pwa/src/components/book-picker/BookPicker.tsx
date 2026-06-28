@@ -1,29 +1,52 @@
 import { useRef, useState } from 'react';
 import { useInstallPrompt } from '@/hooks/useInstallPrompt';
+import { useLibrary } from '@/hooks/useLibrary';
+import { BookShelf } from '@/components/book-shelf';
+import type { LibraryEntry } from '@/interfaces';
+
+type FilePicker = (opts?: object) => Promise<FileSystemFileHandle[]>;
 
 interface Props {
-  onFile: (file: File) => void;
+  onFile: (file: File, handle?: FileSystemFileHandle) => void;
+  onLibraryEntry: (entry: LibraryEntry) => void;
   error: string | null;
 }
 
-export function BookPicker({ onFile, error }: Props) {
+export function BookPicker({ onFile, onLibraryEntry, error }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const { canInstall, install, dismiss } = useInstallPrompt();
+  const { entries, remove } = useLibrary();
 
-  const handleFiles = (files: FileList | null) => {
-    const file = files?.[0];
-    if (file && file.type === 'application/pdf') onFile(file);
+  const openWithPicker = async () => {
+    const picker = (window as unknown as { showOpenFilePicker?: FilePicker }).showOpenFilePicker;
+    if (picker) {
+      try {
+        const [handle] = await picker({
+          types: [{ description: 'PDF Files', accept: { 'application/pdf': ['.pdf'] } }],
+          multiple: false,
+        });
+        const file = await handle.getFile();
+        onFile(file, handle);
+      } catch (e) {
+        if ((e as Error).name !== 'AbortError') inputRef.current?.click();
+      }
+    } else {
+      inputRef.current?.click();
+    }
   };
+
+  const hasShelf = entries.length > 0;
 
   return (
     <div
-      className="flex flex-col items-center justify-center h-full bg-canvas px-wrapper-md gap-8"
+      className="flex flex-col items-center justify-center h-full bg-canvas px-wrapper-md gap-6"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
+      {/* Logo */}
       <div className="flex flex-col items-center gap-3 select-none">
         <svg
-          className="w-16 h-16 text-accent opacity-90"
+          className="w-14 h-14 text-accent opacity-90"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -39,23 +62,32 @@ export function BookPicker({ onFile, error }: Props) {
         <p className="text-muted text-sm">Your personal PDF audiobook reader</p>
       </div>
 
+      {/* Recent books shelf */}
+      {hasShelf && (
+        <div className="w-full">
+          <BookShelf entries={entries} onOpen={onLibraryEntry} onRemove={remove} />
+        </div>
+      )}
+
+      {/* Open button / drop zone */}
       <div
         className={[
-          'w-full max-w-sm rounded-2xl border-2 border-dashed p-10',
-          'flex flex-col items-center gap-4 transition-colors duration-150 cursor-pointer',
+          'w-full max-w-sm rounded-2xl border-2 border-dashed p-8',
+          'flex flex-col items-center gap-3 transition-colors duration-150 cursor-pointer',
           dragging ? 'border-accent bg-accent/10' : 'border-border bg-surface',
         ].join(' ')}
-        onClick={() => inputRef.current?.click()}
+        onClick={openWithPicker}
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => {
           e.preventDefault();
           setDragging(false);
-          handleFiles(e.dataTransfer.files);
+          const file = e.dataTransfer.files?.[0];
+          if (file?.type === 'application/pdf') onFile(file);
         }}
       >
         <svg
-          className="w-10 h-10 text-muted"
+          className="w-9 h-9 text-muted"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -68,15 +100,18 @@ export function BookPicker({ onFile, error }: Props) {
           />
         </svg>
         <div className="text-center">
-          <p className="text-fg font-medium">Open a PDF</p>
-          <p className="text-muted text-sm mt-1">tap to browse or drop here</p>
+          <p className="text-fg font-medium text-sm">{hasShelf ? 'Open another PDF' : 'Open a PDF'}</p>
+          <p className="text-muted text-xs mt-0.5">tap to browse or drop here</p>
         </div>
         <input
           ref={inputRef}
           type="file"
           accept=".pdf,application/pdf"
           className="hidden"
-          onChange={(e) => handleFiles(e.target.files)}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) onFile(file);
+          }}
         />
       </div>
 
@@ -84,6 +119,7 @@ export function BookPicker({ onFile, error }: Props) {
         <p className="text-red-400 text-sm text-center max-w-xs">{error}</p>
       )}
 
+      {/* PWA install banner */}
       {canInstall && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-sm px-4">
           <div className="flex items-center gap-3 bg-raised border border-border rounded-2xl px-4 py-3 shadow-lg">
@@ -100,20 +136,11 @@ export function BookPicker({ onFile, error }: Props) {
                 d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
               />
             </svg>
-            <p className="text-fg text-sm flex-1 leading-snug">
-              Install for a better experience
-            </p>
-            <button
-              onClick={install}
-              className="text-accent text-sm font-semibold shrink-0"
-            >
+            <p className="text-fg text-sm flex-1 leading-snug">Install for a better experience</p>
+            <button onClick={install} className="text-accent text-sm font-semibold shrink-0">
               Install
             </button>
-            <button
-              onClick={dismiss}
-              aria-label="Dismiss"
-              className="text-muted shrink-0"
-            >
+            <button onClick={dismiss} aria-label="Dismiss" className="text-muted shrink-0">
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
               </svg>

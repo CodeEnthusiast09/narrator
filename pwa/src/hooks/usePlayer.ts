@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { buildChapterMap } from '@/lib/chapter';
 import { extractPages } from '@/lib/pdf';
+import { saveToLibrary, updateLibraryProgress } from '@/lib/library';
 import { loadProgress, saveProgress } from '@/lib/progress';
 import { buildPageSentences, CHAPTER_PAUSE } from '@/lib/sentences';
 import { detectCandidates } from '@/lib/skip';
 import { useTTS } from './useTTS';
-import type { Book, PlayerStatus, Progress } from '@/interfaces';
+import type { Book, LibraryEntry, PlayerStatus, Progress } from '@/interfaces';
 
 export interface PlayerControls {
   status: PlayerStatus;
@@ -17,7 +18,8 @@ export interface PlayerControls {
   frontMatterSkip: Set<number>;
   savedProgress: Progress | null;
   tts: ReturnType<typeof useTTS>;
-  openFile: (file: File) => void;
+  openFile: (file: File, handle?: FileSystemFileHandle) => void;
+  openLibraryEntry: (entry: LibraryEntry) => void;
   toggleFrontMatterSkip: (page: number) => void;
   confirmFrontMatter: () => void;
   skipAllFrontMatter: () => void;
@@ -79,6 +81,7 @@ export function usePlayer(): PlayerControls {
       setCurrentPage(next);
       setCurrentSentences(sents);
       void saveProgress(b.key, { page: next, sentence: 0, total: b.pages.length, title: b.title });
+      void updateLibraryProgress(b.key, next, b.pages.length);
       ttsRef.current.speak(sents, 0, onPageComplete);
     } else {
       setStatus('done');
@@ -99,7 +102,7 @@ export function usePlayer(): PlayerControls {
   );
 
   const openFile = useCallback(
-    async (file: File) => {
+    async (file: File, handle?: FileSystemFileHandle) => {
       // Chrome blocks speechSynthesis.speak() after an await (gesture context expires).
       // Calling speak() now (still in the click handler) unlocks it for the session.
       const primer = new SpeechSynthesisUtterance(' ');
@@ -124,6 +127,16 @@ export function usePlayer(): PlayerControls {
           chapterMap,
         };
 
+        void saveToLibrary({
+          id: key,
+          title,
+          pageCount: pages.length,
+          lastPage: 0,
+          progressPct: 0,
+          lastRead: Date.now(),
+          handle,
+        });
+
         const candidates = detectCandidates(pages);
         const progress = await loadProgress(key);
 
@@ -147,6 +160,20 @@ export function usePlayer(): PlayerControls {
       }
     },
     [startReading],
+  );
+
+  const openLibraryEntry = useCallback(
+    async (entry: LibraryEntry) => {
+      if (!entry.handle) return;
+      try {
+        const file = await entry.handle.getFile();
+        openFile(file, entry.handle);
+      } catch {
+        setError('Could not reopen this file. Please browse for it manually.');
+        setStatus('idle');
+      }
+    },
+    [openFile],
   );
 
   const applyFrontMatter = useCallback(
@@ -233,6 +260,7 @@ export function usePlayer(): PlayerControls {
       setCurrentSentences(sents);
       setStatus('reading');
       void saveProgress(b.key, { page: next, sentence: 0, total: b.pages.length, title: b.title });
+      void updateLibraryProgress(b.key, next, b.pages.length);
       ttsRef.current.speak(sents, 0, onPageComplete);
     } else {
       ttsRef.current.stop();
@@ -252,6 +280,7 @@ export function usePlayer(): PlayerControls {
       setCurrentSentences(sents);
       setStatus('reading');
       void saveProgress(b.key, { page: prev, sentence: 0, total: b.pages.length, title: b.title });
+      void updateLibraryProgress(b.key, prev, b.pages.length);
       ttsRef.current.speak(sents, 0, onPageComplete);
     }
   }, [onPageComplete]);
@@ -305,6 +334,7 @@ export function usePlayer(): PlayerControls {
     savedProgress,
     tts,
     openFile,
+    openLibraryEntry,
     toggleFrontMatterSkip,
     confirmFrontMatter,
     skipAllFrontMatter,

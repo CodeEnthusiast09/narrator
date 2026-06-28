@@ -13,6 +13,16 @@ export interface Progress {
   title: string;
 }
 
+export interface LibraryEntry {
+  id: string;
+  title: string;
+  pageCount: number;
+  lastPage: number;
+  progressPct: number;
+  lastRead: number;
+  handle?: FileSystemFileHandle;
+}
+
 export type PlayerStatus =
   | 'idle'
   | 'loading'

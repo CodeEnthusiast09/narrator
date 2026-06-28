@@ -6,7 +6,13 @@ export default function App() {
   const player = usePlayer();
 
   if (player.status === 'idle') {
-    return <BookPicker onFile={player.openFile} error={player.error} />;
+    return (
+      <BookPicker
+        onFile={player.openFile}
+        onLibraryEntry={player.openLibraryEntry}
+        error={player.error}
+      />
+    );
   }
 
   return <Player player={player} />;
