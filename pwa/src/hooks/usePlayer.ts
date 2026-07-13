@@ -183,10 +183,27 @@ export function usePlayer(): PlayerControls {
     async (entry: LibraryEntry) => {
       if (!entry.handle) return;
       try {
+        // After an app restart Chrome revokes the stored handle's permission.
+        // queryPermission/requestPermission must be called within a user gesture
+        // (the tap on the book card satisfies this — promises preserve gesture context).
+        type H = FileSystemHandle & {
+          queryPermission(d: { mode: 'read' }): Promise<PermissionState>;
+          requestPermission(d: { mode: 'read' }): Promise<PermissionState>;
+        };
+        const h = entry.handle as unknown as H;
+        const perm = await h.queryPermission({ mode: 'read' });
+        if (perm !== 'granted') {
+          const requested = await h.requestPermission({ mode: 'read' });
+          if (requested !== 'granted') {
+            setError('Permission denied. Tap the + button to open the file again.');
+            setStatus('idle');
+            return;
+          }
+        }
         const file = await entry.handle.getFile();
         openFile(file, entry.handle);
       } catch {
-        setError('Could not reopen this file. Please browse for it manually.');
+        setError('Could not reopen this file. Tap the + button to open it again.');
         setStatus('idle');
       }
     },
