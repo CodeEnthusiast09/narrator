@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { PlayerControls } from '@/hooks/usePlayer';
+import { useWakeLock } from '@/hooks/useWakeLock';
 import { CHAPTER_PAUSE, PARA_PAUSE } from '@/lib/sentences';
 
 interface Props {
@@ -40,11 +41,23 @@ export function Player({ player }: Props) {
     localStorage.setItem('narrator_font_size', String(fontSizeIdx));
   }, [fontSizeIdx]);
 
+  useWakeLock(status === 'reading');
+
   // Auto-scroll active sentence into view
   useEffect(() => {
     const el = sentenceRefs.current.get(tts.pauseIdx);
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [tts.pauseIdx]);
+
+  if (status === 'loading') {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4 bg-canvas">
+        <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <p className="text-fg font-medium">Opening book...</p>
+        <p className="text-muted text-sm">Extracting pages and chapters</p>
+      </div>
+    );
+  }
 
   if (!book) return null;
 
@@ -59,9 +72,8 @@ export function Player({ player }: Props) {
 
   const isPlaying = status === 'reading';
   const isDone = status === 'done';
-  const isLoading = status === 'loading';
   const canSeek = status === 'reading' || status === 'paused';
-  const showOverlay = status === 'front-matter' || status === 'resume' || isDone || isLoading;
+  const showOverlay = status === 'front-matter' || status === 'resume' || isDone;
 
   return (
     <div className="flex flex-col h-full bg-canvas select-none">
@@ -329,14 +341,6 @@ export function Player({ player }: Props) {
       {showOverlay && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-end">
           <div className="w-full bg-surface rounded-t-2xl border-t border-border p-6 max-h-[80vh] overflow-y-auto">
-
-            {status === 'loading' && (
-              <div className="flex flex-col items-center gap-4 py-6">
-                <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-                <p className="text-fg font-medium">Loading book...</p>
-                <p className="text-muted text-sm">Extracting pages, detecting chapters</p>
-              </div>
-            )}
 
             {status === 'front-matter' && (
               <>
