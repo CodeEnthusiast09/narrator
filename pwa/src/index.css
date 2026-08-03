@@ -6,9 +6,10 @@
   --color-raised: #242424;
   --color-border: #2a2a2a;
   --color-fg: #e4e4e7;
-  --color-muted: #71717a;
+  --color-muted: #90909a;
   --color-accent: #818cf8;
   --color-accent-dim: #3730a3;
+  --color-error: #f87171;
 
   --spacing-wrapper: 1rem;
   --spacing-wrapper-md: 1.7rem;
@@ -29,4 +30,15 @@ body,
   background-color: #0f0f0f;
   color: #e4e4e7;
   font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Color/width transitions are decorative smoothing, not the feedback itself —
+   safe to cut short. The loading spinner (.animate-spin) is left alone: it's
+   the only signal that the app is still working, so removing it under
+   reduced motion would destroy real information, not just polish. */
+@media (prefers-reduced-motion: reduce) {
+  .transition-colors,
+  .transition-all {
+    transition-duration: 1ms;
+  }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import type { PlayerControls } from '@/hooks/usePlayer';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { CHAPTER_PAUSE, PARA_PAUSE } from '@/lib/sentences';
@@ -20,6 +20,45 @@ const SLEEP_OPTIONS: Array<{ label: string; value: number | null }> = [
   { label: '60m', value: 60 },
 ];
 
+// Module-level so identity stays stable across Player re-renders — memo()
+// only skips work if React sees the same component type each time.
+// tts.pauseIdx changes every few seconds during playback, which re-renders
+// Player; without this, every sentence span was recreated on every tick
+// even though at most two of them actually change (the one losing the
+// highlight, the one gaining it).
+const Sentence = memo(function Sentence({
+  index, text, isActive, canSeek, onSeek, registerRef,
+}: {
+  index: number;
+  text: string;
+  isActive: boolean;
+  canSeek: boolean;
+  onSeek: (index: number) => void;
+  registerRef: (index: number, el: HTMLSpanElement | null) => void;
+}) {
+  const handleClick = useCallback(() => {
+    if (canSeek) onSeek(index);
+  }, [canSeek, onSeek, index]);
+
+  const handleRef = useCallback((el: HTMLSpanElement | null) => {
+    registerRef(index, el);
+  }, [registerRef, index]);
+
+  return (
+    <span
+      ref={handleRef}
+      className={[
+        'transition-colors duration-300',
+        canSeek ? 'cursor-pointer' : '',
+        isActive ? 'text-accent' : 'text-fg/70',
+      ].join(' ')}
+      onClick={handleClick}
+    >
+      {text}{' '}
+    </span>
+  );
+});
+
 export function Player({ player }: Props) {
   const {
     status, book, currentPage, currentSentences, tts,
@@ -36,6 +75,11 @@ export function Player({ player }: Props) {
     Number(localStorage.getItem('narrator_font_size') ?? '1'),
   );
   const sentenceRefs = useRef<Map<number, HTMLSpanElement>>(new Map());
+
+  const registerSentenceRef = useCallback((index: number, el: HTMLSpanElement | null) => {
+    if (el) sentenceRefs.current.set(index, el);
+    else sentenceRefs.current.delete(index);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('narrator_font_size', String(fontSizeIdx));
@@ -55,6 +99,7 @@ export function Player({ player }: Props) {
         <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
         <p className="text-fg font-medium">Opening book...</p>
         <p className="text-muted text-sm">Extracting pages and chapters</p>
+        <p role="status" aria-live="polite" className="sr-only">Opening book, extracting pages and chapters</p>
       </div>
     );
   }
@@ -75,13 +120,22 @@ export function Player({ player }: Props) {
   const canSeek = status === 'reading' || status === 'paused';
   const showOverlay = status === 'front-matter' || status === 'resume' || isDone;
 
+  // 'reading'/'paused' are already announced aloud via the TTS opening
+  // announcement, so this only covers states that would otherwise be silent.
+  const statusAnnouncement = {
+    'front-matter': 'Front matter detected. Review which pages to skip.',
+    resume: 'Found saved progress for this book.',
+    done: 'Finished reading.',
+  }[status as 'front-matter' | 'resume' | 'done'] ?? '';
+
   return (
     <div className="flex flex-col h-full bg-canvas select-none">
+      <p role="status" aria-live="polite" className="sr-only">{statusAnnouncement}</p>
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
         <button
-          className="p-2 -ml-2 text-muted active:text-fg transition-colors"
+          className="p-3 -ml-3 text-muted active:text-fg transition-colors"
           onClick={close}
           aria-label="Close"
         >
@@ -113,8 +167,8 @@ export function Player({ player }: Props) {
       {/* Progress bar */}
       <div className="h-0.5 bg-border shrink-0">
         <div
-          className="h-full bg-accent transition-all duration-300"
-          style={{ width: `${pct}%` }}
+          className="h-full w-full origin-left bg-accent transition-transform duration-300"
+          style={{ transform: `scaleX(${pct / 100})` }}
         />
       </div>
 
@@ -124,23 +178,16 @@ export function Player({ player }: Props) {
           {currentSentences.map((s, i) => {
             if (s === CHAPTER_PAUSE) return <span key={i} className="block h-5" />;
             if (s === PARA_PAUSE) return <span key={i} className="block h-3" />;
-            const isActive = isPlaying && i === tts.pauseIdx;
             return (
-              <span
+              <Sentence
                 key={i}
-                ref={(el) => {
-                  if (el) sentenceRefs.current.set(i, el);
-                  else sentenceRefs.current.delete(i);
-                }}
-                className={[
-                  'transition-colors duration-300',
-                  canSeek ? 'cursor-pointer' : '',
-                  isActive ? 'text-accent' : 'text-fg/70',
-                ].join(' ')}
-                onClick={() => canSeek && seekTo(i)}
-              >
-                {s}{' '}
-              </span>
+                index={i}
+                text={s}
+                isActive={isPlaying && i === tts.pauseIdx}
+                canSeek={canSeek}
+                onSeek={seekTo}
+                registerRef={registerSentenceRef}
+              />
             );
           })}
         </p>
@@ -207,7 +254,7 @@ export function Player({ player }: Props) {
           </div>
 
           <button
-            className="p-2 text-muted active:text-fg transition-colors"
+            className="p-3 text-muted active:text-fg transition-colors"
             onClick={() => setShowSettings((v) => !v)}
             aria-label="Settings"
           >
@@ -228,7 +275,7 @@ export function Player({ player }: Props) {
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-fg font-semibold text-base">Settings</h2>
-              <button className="text-muted" onClick={() => setShowSettings(false)}>
+              <button className="text-muted p-3 -m-3" onClick={() => setShowSettings(false)}>
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                 </svg>
@@ -407,7 +454,7 @@ export function Player({ player }: Props) {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-fg font-semibold">Picking up where you left off</p>
+                    <h2 className="text-fg font-semibold">Picking up where you left off</h2>
                     <p className="text-muted text-sm">
                       Page {savedProgress.page + 1} of {savedProgress.total}
                       {' '}({Math.round((savedProgress.page + 1) / savedProgress.total * 100)}% through)
@@ -439,7 +486,7 @@ export function Player({ player }: Props) {
                   </svg>
                 </div>
                 <div className="text-center">
-                  <p className="text-fg font-semibold text-lg">Finished</p>
+                  <h2 className="text-fg font-semibold text-lg">Finished</h2>
                   <p className="text-muted text-sm mt-1">"{book.title}"</p>
                 </div>
                 <button

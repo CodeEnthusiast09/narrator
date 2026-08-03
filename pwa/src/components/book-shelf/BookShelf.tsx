@@ -45,55 +45,61 @@ export function BookShelf({ entries, onOpen, onRemove }: Props) {
         {entries.map((entry) => {
           const [from, to] = coverGradient(entry.title);
           return (
-            <div
-              key={entry.id}
-              className="shrink-0 w-32 cursor-pointer"
-              onClick={() => onOpen(entry)}
-            >
-              {/* Cover */}
-              <div
-                className="relative w-32 h-44 rounded-xl overflow-hidden shadow-lg mb-2"
-                style={{ background: `linear-gradient(145deg, ${from}, ${to})` }}
+            <div key={entry.id} className="relative shrink-0 w-32">
+              <button
+                type="button"
+                className="block w-full text-left cursor-pointer"
+                aria-label={`${entry.title}, ${entry.progressPct}% read`}
+                onClick={() => onOpen(entry)}
               >
-                {/* Book icon */}
-                <svg
-                  className="absolute inset-0 m-auto w-10 h-10 text-white/30"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
+                {/* Cover */}
+                <div
+                  className="relative w-32 h-44 rounded-xl overflow-hidden shadow-lg mb-2"
+                  style={{ background: `linear-gradient(145deg, ${from}, ${to})` }}
                 >
-                  <path d="M11.25 4.533A9.707 9.707 0 0 0 6 3a9.735 9.735 0 0 0-3.25.555.75.75 0 0 0-.5.707v14.25a.75.75 0 0 0 1 .707A8.237 8.237 0 0 1 6 18.75c1.995 0 3.823.707 5.25 1.886V4.533ZM12.75 20.636A8.214 8.214 0 0 1 18 18.75c.966 0 1.89.166 2.75.47a.75.75 0 0 0 1-.708V4.262a.75.75 0 0 0-.5-.707A9.735 9.735 0 0 0 18 3a9.707 9.707 0 0 0-5.25 1.533v16.103Z" />
-                </svg>
+                  {/* Book icon */}
+                  <svg
+                    className="absolute inset-0 m-auto w-10 h-10 text-white/30"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M11.25 4.533A9.707 9.707 0 0 0 6 3a9.735 9.735 0 0 0-3.25.555.75.75 0 0 0-.5.707v14.25a.75.75 0 0 0 1 .707A8.237 8.237 0 0 1 6 18.75c1.995 0 3.823.707 5.25 1.886V4.533ZM12.75 20.636A8.214 8.214 0 0 1 18 18.75c.966 0 1.89.166 2.75.47a.75.75 0 0 0 1-.708V4.262a.75.75 0 0 0-.5-.707A9.735 9.735 0 0 0 18 3a9.707 9.707 0 0 0-5.25 1.533v16.103Z" />
+                  </svg>
 
-                {/* Remove button */}
-                <button
-                  className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/40 flex items-center justify-center"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemove(entry.id);
-                  }}
-                  aria-label="Remove from library"
-                >
+                  {/* Progress bar */}
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
+                    <div
+                      className="h-full w-full origin-left bg-white/70 transition-transform"
+                      style={{ transform: `scaleX(${entry.progressPct / 100})` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Info */}
+                <p className="text-fg text-xs font-medium leading-snug line-clamp-2">
+                  {entry.title}
+                </p>
+                <p className="text-muted text-xs mt-0.5">
+                  {entry.progressPct}% · {timeAgo(entry.lastRead)}
+                </p>
+              </button>
+
+              {/* Remove button — a sibling of the open button rather than nested inside
+                  it, so assistive tech never encounters a focusable control inside another
+                  focusable control. Positioned outside the cover's overflow-hidden clip so
+                  its 44px tap zone isn't cut off by the rounded corners; the visible circle
+                  stays the same 24px it always was, just centered in a bigger hit area. */}
+              <button
+                className="absolute -top-1 -right-1 w-11 h-11 flex items-center justify-center"
+                onClick={() => onRemove(entry.id)}
+                aria-label="Remove from library"
+              >
+                <span className="w-6 h-6 rounded-full bg-black/40 flex items-center justify-center">
                   <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                   </svg>
-                </button>
-
-                {/* Progress bar */}
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
-                  <div
-                    className="h-full bg-white/70 transition-all"
-                    style={{ width: `${entry.progressPct}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Info */}
-              <p className="text-fg text-xs font-medium leading-snug line-clamp-2">
-                {entry.title}
-              </p>
-              <p className="text-muted text-xs mt-0.5">
-                {entry.progressPct}% · {timeAgo(entry.lastRead)}
-              </p>
+                </span>
+              </button>
             </div>
           );
         })}

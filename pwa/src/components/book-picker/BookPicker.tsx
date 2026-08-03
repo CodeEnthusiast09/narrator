@@ -92,7 +92,15 @@ export function BookPicker({ onFile, onLibraryEntry, error }: Props) {
           'flex flex-col items-center gap-3 transition-colors duration-150 cursor-pointer',
           dragging ? 'border-accent bg-accent/10' : 'border-border bg-surface',
         ].join(' ')}
+        role="button"
+        tabIndex={0}
         onClick={openWithPicker}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openWithPicker();
+          }
+        }}
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => {
@@ -132,7 +140,7 @@ export function BookPicker({ onFile, onLibraryEntry, error }: Props) {
       </div>
 
       {error && (
-        <p className="text-red-400 text-sm text-center max-w-xs">{error}</p>
+        <p role="alert" className="text-error text-sm text-center max-w-xs">{error}</p>
       )}
 
       {/* PWA install banner */}
@@ -156,8 +164,8 @@ export function BookPicker({ onFile, onLibraryEntry, error }: Props) {
             <button onClick={install} className="text-accent text-sm font-semibold shrink-0">
               Install
             </button>
-            <button onClick={dismiss} aria-label="Dismiss" className="text-muted shrink-0">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <button onClick={dismiss} aria-label="Dismiss" className="text-muted shrink-0 pt-3 pr-3 pb-3 pl-2">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
               </svg>
             </button>

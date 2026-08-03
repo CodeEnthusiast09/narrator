@@ -1,11 +1,25 @@
-import * as pdfjsLib from 'pdfjs-dist';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).href;
+
+// Loaded on first use instead of at module scope so the ~600KB pdfjs-dist
+// library isn't pulled into the eagerly-loaded main bundle — most sessions
+// open the app without opening a file first.
+let pdfjsLibPromise: Promise<typeof import('pdfjs-dist')> | null = null;
+
+function loadPdfjsLib() {
+  if (!pdfjsLibPromise) {
+    pdfjsLibPromise = import('pdfjs-dist').then((mod) => {
+      mod.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.mjs',
+        import.meta.url,
+      ).href;
+      return mod;
+    });
+  }
+  return pdfjsLibPromise;
+}
 
 export async function extractPages(file: File): Promise<{ title: string; pages: string[] }> {
+  const pdfjsLib = await loadPdfjsLib();
   const buffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
 
