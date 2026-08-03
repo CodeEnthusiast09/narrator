@@ -195,7 +195,7 @@ export function usePlayer(): PlayerControls {
         if (perm !== 'granted') {
           const requested = await h.requestPermission({ mode: 'read' });
           if (requested !== 'granted') {
-            setError('Permission denied. Tap the + button to open the file again.');
+            setError("Permission expired after the app restarted. Tap 'Open another PDF' to select it again.");
             setStatus('idle');
             return;
           }
@@ -203,7 +203,7 @@ export function usePlayer(): PlayerControls {
         const file = await entry.handle.getFile();
         openFile(file, entry.handle);
       } catch {
-        setError('Could not reopen this file. Tap the + button to open it again.');
+        setError("Couldn't reopen this file. Tap 'Open another PDF' to select it again.");
         setStatus('idle');
       }
     },

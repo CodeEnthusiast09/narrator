@@ -8,8 +8,8 @@ colors:
   border: "#2a2a2a"
   fg: "#e4e4e7"
   muted: "#90909a"
-  accent: "#818cf8"
-  accent-dim: "#3730a3"
+  accent: "#f2b866"
+  accent-dim: "#b45309"
   error: "#f87171"
 typography:
   display:
@@ -85,18 +85,18 @@ There is exactly one accent color, and it means one thing everywhere it appears:
 
 **Key Characteristics:**
 - Near-black canvas with three discrete tonal steps of elevation, no gradients except book covers
-- One signal color (Soft Violet-Blue) marks everything active, selected, or speaking
+- One signal color (Warm Amber) marks everything active, selected, or speaking
 - System type only — no custom webfont, load-light and native-feeling by design
 - The bottom sheet is the only secondary-surface pattern; no centered modals, no extra routes
 - Reading content is the only thing that gets size; UI chrome stays at 12–14px
 
 ## Colors
 
-A near-total dark palette — three steps of near-black plus a single soft indigo signal color — with color reserved almost entirely for meaning, not decoration.
+A near-total dark palette — three steps of near-black plus a single warm amber signal color — with color reserved almost entirely for meaning, not decoration.
 
 ### Primary
-- **Soft Violet-Blue** (`#818cf8`): the one accent. Marks the active playback state, the selected item in every pill control (speed, pitch, sleep timer, voice), primary CTA fills, and the currently-spoken sentence in the reading pane.
-- **Deep Indigo** (`#3730a3`, `accent-dim`): defined in the theme as the accent's deep/pressed counterpart. Not yet wired to any component — reserved for a future pressed or deep-emphasis state rather than proven in the shipped UI.
+- **Warm Amber** (`#f2b866`): the one accent. Marks the active playback state, the selected item in every pill control (speed, pitch, sleep timer, voice), primary CTA fills, and the currently-spoken sentence in the reading pane. Chosen to actually deliver on the north star's "small warm light in the dark" promise — the system's original accent was a cool periwinkle-blue that contradicted its own stated intent; this corrects it to the amber/warm-light family every other night-reading tool converges on for the same reason (protecting night vision, feeling like a lamp rather than a screen).
+- **Burnt Amber** (`#b45309`, `accent-dim`): defined in the theme as the accent's deep/pressed counterpart. Not yet wired to any component — reserved for a future pressed or deep-emphasis state rather than proven in the shipped UI.
 
 ### Neutral
 - **Ink Black** (`#0f0f0f`, `canvas`): the base page background — the darkest surface in the app.
@@ -110,7 +110,7 @@ A near-total dark palette — three steps of near-black plus a single soft indig
 - **Warm Red** (`#f87171`, `error`): the only error/failure color in the system, currently used for the PDF-import error message.
 
 ### Named Rules
-**The One Signal Rule.** Soft Violet-Blue is the only color in the entire system that communicates state. If something is accent-colored, it is telling you it's active, selected, or speaking — never decoration.
+**The One Signal Rule.** Warm Amber is the only color in the entire system that communicates state. If something is accent-colored, it is telling you it's active, selected, or speaking — never decoration.
 
 **The One Gradient Exception Rule.** Every surface in the app is a flat fill except book cover art, which is the sole place gradients appear — a generated per-title identity, not a decorative device.
 
@@ -160,14 +160,14 @@ Borders are a single hairline weight and color throughout (1px, Hairline Graphit
 
 ### Buttons
 - **Shape:** 12px radius (`rounded-xl`) on square buttons, 8px (`rounded-lg`) on pill/segment buttons, full circle on the primary transport control.
-- **Primary (filled):** Soft Violet-Blue background, Ink Black text, semibold — the one confirmable action in any sheet (Skip selected, Continue, Close) and the "selected" state of every pill control.
+- **Primary (filled):** Warm Amber background, Ink Black text, semibold — the one confirmable action in any sheet (Skip selected, Continue, Close) and the "selected" state of every pill control.
 - **Hover / Focus:** no hover state (touch-first, no mouse target); press dims the fill to 80% opacity (`active:bg-accent/80`).
 - **Secondary / Outlined:** transparent fill, 1px Hairline Graphite border, Moonlight White text — the non-destructive alternative action (Keep all, Start over) and the font-size stepper. Press fills with Graphite Fill.
 - **Ghost (icon-only):** no fill, no border, Dusk Gray icon that brightens to Moonlight White on press — every header/nav icon (close, prev/next page, settings gear, dismiss banner).
-- **Primary Transport (FAB):** 64px filled circle, Soft Violet-Blue background, `shadow-lg` — the only button that combines fill and shadow, and the single largest control on screen.
+- **Primary Transport (FAB):** 64px filled circle, Warm Amber background, `shadow-lg` — the only button that combines fill and shadow, and the single largest control on screen.
 
 ### Segmented Pills (signature component)
-- **Style:** a `flex-1` row sharing one 8px-radius group; unselected pills are transparent with Dusk Gray text, the selected pill fills Soft Violet-Blue with Ink Black text.
+- **Style:** a `flex-1` row sharing one 8px-radius group; unselected pills are transparent with Dusk Gray text, the selected pill fills Warm Amber with Ink Black text.
 - **Used for:** playback speed, pitch, sleep timer duration, and voice selection. Every "pick one of N" decision in the app uses this exact pattern — never a dropdown, never a radio list.
 
 ### Cards / Containers (book covers)
@@ -186,7 +186,7 @@ Borders are a single hairline weight and color throughout (1px, Hairline Graphit
 ## Do's and Don'ts
 
 ### Do:
-- **Do** keep Soft Violet-Blue as the only color that means "active, selected, or speaking" — wherever it appears, it's marking state, not decorating.
+- **Do** keep Warm Amber as the only color that means "active, selected, or speaking" — wherever it appears, it's marking state, not decorating.
 - **Do** use the bottom-sheet pattern for any new secondary surface.
 - **Do** keep interactive chrome (buttons, labels, section headers) at 12–14px; reserve size for the reading content itself.
 - **Do** respect `env(safe-area-inset-bottom)` on anything anchored to the bottom edge.

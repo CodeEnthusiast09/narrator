@@ -21,7 +21,19 @@ function loadPdfjsLib() {
 export async function extractPages(file: File): Promise<{ title: string; pages: string[] }> {
   const pdfjsLib = await loadPdfjsLib();
   const buffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+
+  let pdf;
+  try {
+    pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  } catch (err) {
+    // pdf.js's own exception classes aren't all re-exported from the package's
+    // main entry, but every one of them sets `.name` to match, so checking
+    // that string is the reliable way to tell a locked PDF from a corrupt one.
+    if (err instanceof Error && err.name === 'PasswordException') {
+      throw new Error("This PDF is password-protected and can't be opened.");
+    }
+    throw new Error("Couldn't read this file — it may not be a valid PDF.");
+  }
 
   let title = titleFromFilename(file.name);
 

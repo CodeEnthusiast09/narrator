@@ -54,7 +54,7 @@ export interface TTSControls {
 export function useTTS(): TTSControls {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
-  const [speed, setSpeedState] = useState(1.0);
+  const [speed, setSpeedState] = useState(() => Number(localStorage.getItem('narrator_speed') ?? '1'));
   const [pitch, setPitchState] = useState(() => Number(localStorage.getItem('narrator_pitch') ?? '1'));
   const [pauseIdx, setPauseIdx] = useState(0);
 
@@ -64,7 +64,7 @@ export function useTTS(): TTSControls {
     paused: false,
     stopped: true,
     onComplete: null as (() => void) | null,
-    speed: 1.0,
+    speed: Number(localStorage.getItem('narrator_speed') ?? '1'),
     pitch: Number(localStorage.getItem('narrator_pitch') ?? '1'),
     voice: null as SpeechSynthesisVoice | null,
     timer: null as ReturnType<typeof setTimeout> | null,
@@ -219,6 +219,7 @@ export function useTTS(): TTSControls {
     const clamped = Math.max(0.5, Math.min(3.0, Math.round(s * 4) / 4));
     r.current.speed = clamped;
     setSpeedState(clamped);
+    localStorage.setItem('narrator_speed', String(clamped));
   }, []);
 
   const setPitch = useCallback((p: number) => {

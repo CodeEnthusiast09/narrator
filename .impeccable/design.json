@@ -10,8 +10,8 @@
       "border": { "role": "neutral", "displayName": "Hairline Graphite", "canonical": "#2a2a2a", "tonalRamp": ["#262626", "#454545", "#636363", "#828282", "#a1a1a1", "#bfbfbf", "#dedede", "#f2f2f2"] },
       "fg": { "role": "neutral", "displayName": "Moonlight White", "canonical": "#e4e4e7", "tonalRamp": ["#242428", "#414149", "#5e5e69", "#7b7b89", "#9b9ba6", "#bcbcc3", "#dcdce0", "#f2f2f3"] },
       "muted": { "role": "neutral", "displayName": "Dusk Gray", "canonical": "#90909a", "tonalRamp": ["#242428", "#424248", "#5f5f68", "#7c7c88", "#9c9ca5", "#bcbcc2", "#dcdcdf", "#f2f2f3"] },
-      "accent": { "role": "primary", "displayName": "Soft Violet-Blue", "canonical": "#818cf8", "tonalRamp": ["#040a48", "#071382", "#0a1bbc", "#1227f2", "#4c5cf5", "#8691f8", "#c0c6fc", "#e7e9fe"] },
-      "accent-dim": { "role": "primary", "displayName": "Deep Indigo", "canonical": "#3730a3", "tonalRamp": ["#14113b", "#241f6a", "#342d9a", "#463ec6", "#736dd4", "#a19de2", "#ceccf0", "#ecebf9"] },
+      "accent": { "role": "primary", "displayName": "Warm Amber", "canonical": "#f2b866", "tonalRamp": ["#472c06", "#7f4f0b", "#b77210", "#eb9419", "#f0ae51", "#f5c889", "#fae3c2", "#fdf4e7"] },
+      "accent-dim": { "role": "primary", "displayName": "Burnt Amber", "canonical": "#b45309", "tonalRamp": ["#492204", "#833c07", "#bd5709", "#f37311", "#f6954b", "#f9b786", "#fcdac0", "#fef1e7"] },
       "error": { "role": "status", "displayName": "Warm Red", "canonical": "#f87171", "tonalRamp": ["#490404", "#830606", "#be0909", "#f31111", "#f64b4b", "#f98585", "#fcc0c0", "#fee7e7"] }
     },
     "typographyMeta": {
@@ -41,7 +41,7 @@
       "refersTo": "button-primary",
       "description": "The one confirmable action in any sheet (Skip selected, Continue, Close).",
       "html": "<button class=\"ds-btn-primary\">Continue</button>",
-      "css": ".ds-btn-primary { background: #818cf8; color: #0f0f0f; font: 600 0.875rem system-ui, -apple-system, sans-serif; padding: 12px 32px; border: none; border-radius: 12px; transition: opacity 0.15s; } .ds-btn-primary:active { opacity: 0.8; }"
+      "css": ".ds-btn-primary { background: #f2b866; color: #0f0f0f; font: 600 0.875rem system-ui, -apple-system, sans-serif; padding: 12px 32px; border: none; border-radius: 12px; transition: opacity 0.15s; } .ds-btn-primary:active { opacity: 0.8; }"
     },
     {
       "name": "Secondary Button",
@@ -65,7 +65,7 @@
       "refersTo": "pill-selected",
       "description": "Every \"pick one of N\" decision in the app: playback speed, pitch, sleep timer, voice.",
       "html": "<div class=\"ds-pill-group\">\n  <button class=\"ds-pill ds-pill--selected\">1x</button>\n  <button class=\"ds-pill\">1.25x</button>\n  <button class=\"ds-pill\">1.5x</button>\n</div>",
-      "css": ".ds-pill-group { display: flex; gap: 4px; } .ds-pill { flex: 1; padding: 8px 0; border: none; border-radius: 8px; background: transparent; color: #90909a; font: 500 0.75rem system-ui, -apple-system, sans-serif; letter-spacing: 0.1em; transition: background-color 0.15s, color 0.15s; } .ds-pill:active { background: #242424; } .ds-pill--selected { background: #818cf8; color: #0f0f0f; }"
+      "css": ".ds-pill-group { display: flex; gap: 4px; } .ds-pill { flex: 1; padding: 8px 0; border: none; border-radius: 8px; background: transparent; color: #90909a; font: 500 0.75rem system-ui, -apple-system, sans-serif; letter-spacing: 0.1em; transition: background-color 0.15s, color 0.15s; } .ds-pill:active { background: #242424; } .ds-pill--selected { background: #f2b866; color: #0f0f0f; }"
     },
     {
       "name": "Primary Transport Button",
@@ -73,7 +73,7 @@
       "refersTo": "fab-play",
       "description": "The single largest and most elevated control on screen — play/pause.",
       "html": "<button class=\"ds-fab-play\" aria-label=\"Play\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z\"/></svg></button>",
-      "css": ".ds-fab-play { width: 64px; height: 64px; border-radius: 9999px; background: #818cf8; border: none; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgb(0 0 0/0.1), 0 4px 6px -4px rgb(0 0 0/0.1); transition: background-color 0.15s; } .ds-fab-play:active { background: rgb(129 140 248 / 0.8); } .ds-fab-play .ds-icon { width: 28px; height: 28px; color: #0f0f0f; margin-left: 4px; }"
+      "css": ".ds-fab-play { width: 64px; height: 64px; border-radius: 9999px; background: #f2b866; border: none; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgb(0 0 0/0.1), 0 4px 6px -4px rgb(0 0 0/0.1); transition: background-color 0.15s; } .ds-fab-play:active { background: rgb(242 184 102 / 0.8); } .ds-fab-play .ds-icon { width: 28px; height: 28px; color: #0f0f0f; margin-left: 4px; }"
     },
     {
       "name": "Book Cover Card",
@@ -97,20 +97,20 @@
     "overview": "Narrator gets used in the dark, half-listening, at the end of a day — not stared at. The interface takes its cue from an instrument panel: near-black chrome, one signal color, every control sized for a thumb and a glance rather than a stare. But it stays intimate rather than clinical — this is a small warm light held in a dark room, not a piece of hardware. The explicit anti-reference is the corporate dashboard: no cool blue-on-white chrome, no data-density-for-its-own-sake, no sterile precision without warmth.\n\nThere is exactly one accent color, and it means one thing everywhere it appears: active, selected, or currently being spoken. Depth comes from three flat tonal layers, never gradients or blur — the single exception is book cover art, which is allowed to be decorative because it is the one place in the app meant to feel like an object rather than a control. Typography stays disciplined: the words being read are the only thing that gets visual size; every button, label, and header around them stays small and quiet.",
     "keyCharacteristics": [
       "Near-black canvas with three discrete tonal steps of elevation, no gradients except book covers",
-      "One signal color (Soft Violet-Blue) marks everything active, selected, or speaking",
+      "One signal color (Warm Amber) marks everything active, selected, or speaking",
       "System type only — no custom webfont, load-light and native-feeling by design",
       "The bottom sheet is the only secondary-surface pattern; no centered modals, no extra routes",
       "Reading content is the only thing that gets size; UI chrome stays at 12–14px"
     ],
     "rules": [
-      { "name": "The One Signal Rule", "body": "Soft Violet-Blue is the only color in the entire system that communicates state. If something is accent-colored, it is telling you it's active, selected, or speaking — never decoration.", "section": "colors" },
+      { "name": "The One Signal Rule", "body": "Warm Amber is the only color in the entire system that communicates state. If something is accent-colored, it is telling you it's active, selected, or speaking — never decoration.", "section": "colors" },
       { "name": "The One Gradient Exception Rule", "body": "Every surface in the app is a flat fill except book cover art, which is the sole place gradients appear — a generated per-title identity, not a decorative device.", "section": "colors" },
       { "name": "The Reading Priority Rule", "body": "Only the page text currently being read renders at adjustable body size (14–24px). Every other piece of UI text — buttons, headers, labels, chrome — stays fixed at 12–14px, so the words being read remain the visual focus of the screen.", "section": "typography" },
       { "name": "The One Viewport Rule", "body": "There is exactly one screen size to design for. The two unused breakpoint tokens are a reservation, not a signal to start building responsive layout.", "section": "layout" },
       { "name": "The Anchored vs. Floating Rule", "body": "Anything docked to a screen edge gets a 1px border, never a shadow. Shadow is reserved for the small set of elements that genuinely float free of the layout.", "section": "elevation" }
     ],
     "dos": [
-      "Do keep Soft Violet-Blue as the only color that means \"active, selected, or speaking\" — wherever it appears, it's marking state, not decorating.",
+      "Do keep Warm Amber as the only color that means \"active, selected, or speaking\" — wherever it appears, it's marking state, not decorating.",
       "Do use the bottom-sheet pattern for any new secondary surface.",
       "Do keep interactive chrome (buttons, labels, section headers) at 12–14px; reserve size for the reading content itself.",
       "Do respect env(safe-area-inset-bottom) on anything anchored to the bottom edge."

@@ -81,6 +81,23 @@ export function Player({ player }: Props) {
     else sentenceRefs.current.delete(index);
   }, []);
 
+  // Tap-to-seek has no visual affordance on touch (cursor-pointer does nothing
+  // on Android), so it's shown once and dismissed either explicitly or the
+  // moment the reader actually uses the feature — whichever proves it first.
+  const [showSeekHint, setShowSeekHint] = useState(
+    () => localStorage.getItem('narrator_seen_seek_hint') !== '1',
+  );
+
+  const dismissSeekHint = useCallback(() => {
+    setShowSeekHint(false);
+    localStorage.setItem('narrator_seen_seek_hint', '1');
+  }, []);
+
+  const handleSentenceSeek = useCallback((index: number) => {
+    dismissSeekHint();
+    seekTo(index);
+  }, [dismissSeekHint, seekTo]);
+
   useEffect(() => {
     localStorage.setItem('narrator_font_size', String(fontSizeIdx));
   }, [fontSizeIdx]);
@@ -174,6 +191,20 @@ export function Player({ player }: Props) {
 
       {/* Page text — sentence-level highlighting, tap-to-seek */}
       <div className="flex-1 overflow-y-auto px-wrapper-md py-5">
+        {showSeekHint && canSeek && (
+          <div className="flex items-center gap-3 mb-3 px-3 py-2 rounded-lg bg-raised">
+            <p className="flex-1 text-muted text-xs">Tap any sentence to jump there</p>
+            <button
+              onClick={dismissSeekHint}
+              aria-label="Dismiss hint"
+              className="text-muted p-2 -m-2 shrink-0"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
         <p className="leading-relaxed break-words" style={{ fontSize: FONT_SIZES[fontSizeIdx] }}>
           {currentSentences.map((s, i) => {
             if (s === CHAPTER_PAUSE) return <span key={i} className="block h-5" />;
@@ -185,7 +216,7 @@ export function Player({ player }: Props) {
                 text={s}
                 isActive={isPlaying && i === tts.pauseIdx}
                 canSeek={canSeek}
-                onSeek={seekTo}
+                onSeek={handleSentenceSeek}
                 registerRef={registerSentenceRef}
               />
             );
@@ -246,6 +277,7 @@ export function Player({ player }: Props) {
                   'px-2 py-1 rounded text-xs font-medium transition-colors',
                   tts.speed === s ? 'bg-accent text-canvas' : 'text-muted active:text-fg',
                 ].join(' ')}
+                aria-pressed={tts.speed === s}
                 onClick={() => tts.setSpeed(s)}
               >
                 {s === 1.0 ? '1x' : `${s}x`}
@@ -300,6 +332,7 @@ export function Player({ player }: Props) {
                       'flex-1 py-2 rounded-lg text-xs font-medium transition-colors',
                       fontSizeIdx === idx ? 'bg-accent text-canvas' : 'text-muted active:bg-raised',
                     ].join(' ')}
+                    aria-pressed={fontSizeIdx === idx}
                     onClick={() => setFontSizeIdx(idx)}
                   >
                     {label}
@@ -325,6 +358,7 @@ export function Player({ player }: Props) {
                     'flex-1 py-2 rounded-lg text-xs font-medium transition-colors',
                     tts.pitch === p ? 'bg-accent text-canvas' : 'text-muted active:bg-raised',
                   ].join(' ')}
+                  aria-pressed={tts.pitch === p}
                   onClick={() => tts.setPitch(p)}
                 >
                   {p === 1.0 ? '1×' : `${p}×`}
@@ -349,6 +383,7 @@ export function Player({ player }: Props) {
                       'flex-1 py-2 rounded-lg text-xs font-medium transition-colors',
                       active ? 'bg-accent text-canvas' : 'text-muted active:bg-raised',
                     ].join(' ')}
+                    aria-pressed={active}
                     onClick={() => sleepTimer.set(value)}
                   >
                     {label}
@@ -371,6 +406,7 @@ export function Player({ player }: Props) {
                           ? 'bg-accent text-canvas font-medium'
                           : 'text-fg active:bg-raised',
                       ].join(' ')}
+                      aria-pressed={tts.selectedVoice?.name === v.name}
                       onClick={() => tts.setVoice(v)}
                     >
                       <span>{v.name}</span>
@@ -384,10 +420,13 @@ export function Player({ player }: Props) {
         </div>
       )}
 
-      {/* Overlays */}
+      {/* Overlays — tap outside to back out to the library, same as Settings */}
       {showOverlay && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-end">
-          <div className="w-full bg-surface rounded-t-2xl border-t border-border p-6 max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-end" onClick={close}>
+          <div
+            className="w-full bg-surface rounded-t-2xl border-t border-border p-6 max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
 
             {status === 'front-matter' && (
               <>
@@ -402,6 +441,8 @@ export function Player({ player }: Props) {
                       <button
                         key={idx}
                         className="flex items-start gap-3 text-left p-3 rounded-lg bg-raised active:bg-border transition-colors"
+                        role="checkbox"
+                        aria-checked={checked}
                         onClick={() => toggleFrontMatterSkip(idx)}
                       >
                         <div className={[
